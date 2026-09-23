@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { compareVersions } from "../src/doctor.mjs";
-import { bypassReason, claudeSettingsEnv } from "../src/environment.mjs";
+import { PASSTHROUGH_ENV, bypassReason, claudeSettingsEnv, isFirstParty, passthroughEnv } from "../src/environment.mjs";
 import { splitArgs } from "../src/launch.mjs";
 
 test("--jev-* options are ours; everything else goes to claude", () => {
@@ -46,4 +46,16 @@ test("versions compare numerically", () => {
   assert.ok(compareVersions("2.1.281", "2.1.280") > 0);
   assert.ok(compareVersions("2.1.9", "2.1.280") < 0);
   assert.equal(compareVersions("2.1.280", "2.1.280"), 0);
+});
+
+test("tool search and tool streaming stay on behind the proxy, unless the user decided otherwise", () => {
+  const direct = "https://api.anthropic.com";
+  assert.deepEqual(passthroughEnv({ upstream: direct, env: {} }), PASSTHROUGH_ENV);
+  assert.equal(PASSTHROUGH_ENV.ENABLE_TOOL_SEARCH, "true");
+  assert.deepEqual(passthroughEnv({ upstream: direct, env: { ENABLE_TOOL_SEARCH: "false" } }), { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1" });
+  assert.deepEqual(passthroughEnv({ upstream: direct, env: {}, settingsEnv: { ENABLE_TOOL_SEARCH: "auto" } }), { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1" });
+  assert.deepEqual(passthroughEnv({ upstream: "https://gateway.corp.example", env: {} }), {}, "a user's own gateway keeps Claude Code's defaults");
+  assert.ok(isFirstParty("https://api.anthropic.com/"));
+  assert.ok(!isFirstParty("https://api.anthropic.com.evil.example"));
+  assert.ok(!isFirstParty("not a url"));
 });

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BENCH_DIR, loadConfig, resolveKey } from "./config.mjs";
 import { EFFORTS, VERSION, modelInfo } from "./constants.mjs";
-import { bypassReason, claudeSettingsEnv } from "./environment.mjs";
+import { bypassReason, claudeSettingsEnv, passthroughEnv } from "./environment.mjs";
 import { JevClient } from "./jev.mjs";
 import { createPolicy } from "./policy.mjs";
 import { createProxy, memoryLogger } from "./proxy.mjs";
@@ -124,7 +124,8 @@ async function runArm({ task, arm, opts, config, key }) {
     tag: `${task.name}/${arm}`,
   });
   const port = await proxy.listen(0);
-  const env = headlessEnv({ ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}` });
+  const upstream = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
+  const env = headlessEnv({ ...passthroughEnv({ upstream, settingsEnv: claudeSettingsEnv() }), ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}` });
   const started = Date.now();
   const res = await runClaudeHeadless({
     claudePath: config.claudePath,

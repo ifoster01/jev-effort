@@ -3,7 +3,7 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:os";
 import { LOG_DIR, STATE_DIR, loadConfig, resolveKey } from "./config.mjs";
-import { bypassReason, claudeSettingsEnv } from "./environment.mjs";
+import { bypassReason, claudeSettingsEnv, passthroughEnv } from "./environment.mjs";
 import { JevClient } from "./jev.mjs";
 import { createPolicy } from "./policy.mjs";
 import { createLogger, createProxy } from "./proxy.mjs";
@@ -82,7 +82,8 @@ export async function launch(argv, { stderr = process.stderr } = {}) {
   const plain = () => runClaude(config.claudePath, claudeArgs, process.env);
 
   if (config.mode === "off") return plain();
-  const bypass = bypassReason(process.env, claudeSettingsEnv());
+  const settingsEnv = claudeSettingsEnv();
+  const bypass = bypassReason(process.env, settingsEnv);
   if (bypass) {
     say(`running plain claude: ${bypass}.`);
     return plain();
@@ -110,8 +111,9 @@ export async function launch(argv, { stderr = process.stderr } = {}) {
     jev: new JevClient({ key: key.key, provider: key.provider, timeoutMs: config.jevTimeoutMs }),
     store,
   });
+  const upstream = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
   const proxy = createProxy({
-    upstream: process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com",
+    upstream,
     mode: config.mode,
     policy,
     logger: createLogger(LOG_DIR),
@@ -132,6 +134,7 @@ export async function launch(argv, { stderr = process.stderr } = {}) {
   );
   const code = await runClaude(config.claudePath, claudeArgs, {
     ...process.env,
+    ...passthroughEnv({ upstream, settingsEnv }),
     ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}`,
     JEV_EFFORT_ACTIVE: "1",
   });

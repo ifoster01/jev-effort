@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { accessSync, constants, mkdirSync } from "node:fs";
 import { CONFIG_FILE, DATA_DIR, loadConfig, resolveKey } from "./config.mjs";
 import { SUPPORTED_MODEL_NAMES, TESTED_CLAUDE_CODE, VERSION } from "./constants.mjs";
-import { bypassReason, claudeSettingsEnv } from "./environment.mjs";
+import { bypassReason, claudeSettingsEnv, passthroughEnv } from "./environment.mjs";
 import { probe } from "./setup.mjs";
 
 export function compareVersions(a, b) {
@@ -53,6 +53,12 @@ export async function doctor(argv, { stdout = process.stdout } = {}) {
     ok(`mode: ${config.mode}; effort ${config.floor} to ${config.ceiling === "session" ? "your /effort setting" : config.ceiling}`);
     const bypass = bypassReason(process.env, claudeSettingsEnv());
     if (bypass) warn(`jev-effort will run plain claude here: ${bypass}.`);
+    const settingsEnv = claudeSettingsEnv();
+    const upstream = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
+    const toolSearch = process.env.ENABLE_TOOL_SEARCH ?? settingsEnv.ENABLE_TOOL_SEARCH ?? passthroughEnv({ upstream, settingsEnv }).ENABLE_TOOL_SEARCH;
+    if (toolSearch === "true") ok("MCP tool search stays on behind the proxy (ENABLE_TOOL_SEARCH=true)");
+    else if (toolSearch) warn(`ENABLE_TOOL_SEARCH=${toolSearch} is set, so behind the proxy Claude Code may load MCP tool definitions into every request. jev-effort's proxy supports ENABLE_TOOL_SEARCH=true.`);
+    else warn("MCP tool search will be off behind your gateway, so MCP tool definitions load into every request. Set ENABLE_TOOL_SEARCH=true if the gateway forwards tool_reference blocks.");
     if (process.env.ANTHROPIC_BASE_URL) warn(`requests will be forwarded to ANTHROPIC_BASE_URL (${process.env.ANTHROPIC_BASE_URL}); a gateway must pass anthropic-beta headers through.`);
     ok(`manages ${SUPPORTED_MODEL_NAMES.join(", ")} (verified: Opus 5.5); other models pass through untouched`);
 

@@ -1,4 +1,5 @@
 import { LOG_DIR, STATE_DIR, loadConfig, resolveKey } from "./config.mjs";
+import { passthroughEnv } from "./environment.mjs";
 import { VERSION } from "./constants.mjs";
 import { JevClient } from "./jev.mjs";
 import { launch } from "./launch.mjs";
@@ -50,9 +51,14 @@ async function serve(argv) {
     logger: createLogger(LOG_DIR),
   });
   const bound = await proxy.listen(port);
+  const extra = Object.entries(passthroughEnv({ upstream: process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com", env: {} }))
+    .map(([k, v]) => `${k}=${v} `)
+    .join("");
   process.stderr.write(
     `jev-effort ${config.mode} proxy listening on http://127.0.0.1:${bound}\n` +
-      `Start Claude Code with ANTHROPIC_BASE_URL=http://127.0.0.1:${bound}. Ctrl+C to stop.\n`,
+      `Start Claude Code with: ${extra}ANTHROPIC_BASE_URL=http://127.0.0.1:${bound} claude\n` +
+      (extra ? "(The first variables keep MCP tool search and tool streaming on; Claude Code turns them off behind any proxy.)\n" : "") +
+      "Ctrl+C to stop.\n",
   );
   await new Promise((resolve) => process.once("SIGINT", resolve));
   await proxy.close();

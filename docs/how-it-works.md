@@ -57,6 +57,11 @@ These were found by capturing real requests and are what the design rests on.
   same, so the cache still hits, but a naive hash of the history changes. The marker
   bookkeeping hashes a normalized form (string content → one text block, `cache_control`
   removed).
+- **Any custom `ANTHROPIC_BASE_URL` turns off MCP tool search.** Claude Code assumes a proxy
+  might drop `tool_reference` blocks, so it loads every MCP tool definition into every request
+  instead. With several MCP servers connected, a fresh session started at 281K–500K tokens
+  instead of 27K. jev-effort's proxy forwards those blocks unchanged, so it sets
+  `ENABLE_TOOL_SEARCH=true` for the Claude Code it launches.
 - **Thinking is requested with `display: "omitted"`**, so Jev sees Claude's visible text and
   tool activity but no reasoning.
 

@@ -32,6 +32,37 @@ function noProxyCovers(noProxy, host) {
     .some((p) => p === "*" || host === p.replace(/^\./, "") || host.endsWith(p.startsWith(".") ? p : `.${p}`));
 }
 
+export function isFirstParty(url) {
+  try {
+    return new URL(url).hostname === "api.anthropic.com";
+  } catch {
+    return false;
+  }
+}
+
+// Claude Code turns some capabilities off whenever ANTHROPIC_BASE_URL points somewhere other
+// than api.anthropic.com, because an arbitrary proxy might drop what they send. jev-effort's
+// proxy forwards request bodies and beta headers unchanged, so when it forwards to the Claude
+// API directly, those capabilities are safe to turn back on.
+export const PASSTHROUGH_ENV = {
+  // MCP tool search. Off, every MCP tool definition is loaded into every request, which can put
+  // hundreds of thousands of tokens into a fresh session's context.
+  ENABLE_TOOL_SEARCH: "true",
+  // Streaming tool-call arguments as they're generated, as on a direct connection.
+  CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1",
+};
+
+// The variables to add to the launched Claude Code's environment. A value the user set, in the
+// shell or in Claude Code's settings, always wins. Behind the user's own gateway, Claude Code's
+// defaults stand, since that gateway may not forward these features.
+export function passthroughEnv({ upstream, env = process.env, settingsEnv = {} }) {
+  if (!isFirstParty(upstream)) return {};
+  const out = {};
+  for (const [name, value] of Object.entries(PASSTHROUGH_ENV))
+    if (env[name] === undefined && settingsEnv[name] === undefined) out[name] = value;
+  return out;
+}
+
 // Returns a reason string when jev-effort should step aside and run plain `claude`.
 export function bypassReason(env, settingsEnv = {}) {
   const all = { ...env, ...settingsEnv };
