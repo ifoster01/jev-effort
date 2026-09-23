@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3
+
+- Restores Claude Code's request-class hint headers behind the proxy
+  (`CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`), as on a direct connection, and uses them: compaction and
+  side requests (titles, classifiers) no longer consult Jev or count as steps, and still keep the
+  cached prefix.
+- Documents the direct-connection features Claude Code turns off behind any proxy that can't be
+  restored: Remote Control, server-managed settings, claude.ai-backed tools such as Artifacts.
+  `doctor` warns.
+
 ## 0.1.2
 
 - **Fix: MCP tool search was off in sessions launched through jev-effort.** Claude Code disables
@@ -8,11 +18,6 @@
   now sets `ENABLE_TOOL_SEARCH=true` and `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1` when
   forwarding to the Claude API directly, unless you've set them; `serve` prints them and
   `doctor` checks them.
-- Also restores Claude Code's request-class hint headers behind the proxy
-  (`CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`), and uses them: compaction and side requests (titles,
-  classifiers) no longer consult Jev or count as steps, and still keep the cached prefix.
-- Documents the direct-connection features Claude Code turns off behind any proxy that can't be
-  restored: Remote Control, server-managed settings, claude.ai-backed tools. `doctor` warns.
 - README rewritten as a research write-up: question, method, results, and limitations from
   a day of real sessions and the benchmark. Tool documentation moved to docs/usage.md.
 - docs/results/2026-09-23-shadow-sessions.json: the anonymized aggregate behind the README.
