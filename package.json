@@ -1,7 +1,7 @@
 {
   "name": "jev-effort",
-  "version": "0.1.1",
-  "description": "Per-step, cache-preserving reasoning effort for Claude Code, chosen by the Jev classifier. Unofficial.",
+  "version": "0.1.2",
+  "description": "Research: does letting Jev choose Claude Code's reasoning effort per step save money? A cache-safe proxy, shadow mode, and a benchmark to measure it. Unofficial.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ifoster01/jev-effort.git"

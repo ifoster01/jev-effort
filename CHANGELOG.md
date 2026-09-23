@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
+
+- README rewritten as a research write-up: question, method, results, and limitations from
+  a day of real sessions and the benchmark. Tool documentation moved to docs/usage.md.
+- docs/results/2026-09-23-shadow-sessions.json: the anonymized aggregate behind the README.
 
 - README: Related work (similar tools, research, Claude Code's own options).
 - docs/how-it-works.md: tested Claude Code's early-access function hooks as a native

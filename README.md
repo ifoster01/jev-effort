@@ -1,217 +1,203 @@
 # jev-effort
 
-**Per-step reasoning effort for Claude Code, without breaking the prompt cache.**
+**Does letting Jev choose Claude Code's reasoning effort, step by step, save money? I measured
+it on a day of real sessions. It would have saved about 2%.**
 
-Claude Code runs a whole session at one effort level, but most steps (reading a file, running
-a test, applying an edit already decided) don't need deep reasoning. jev-effort asks
-[Jev](https://openrouter.ai/typesafe/jev-1.13), a small, cheap decision model, which effort each
-step needs, and applies it in a way that keeps Claude Code's prompt cache intact.
+> A research project. The code works and the results are reproducible, but it isn't
+> recommended as a cost-saving tool. Unofficial; not affiliated with Anthropic or TypeSafe.
 
-> Unofficial. Not affiliated with Anthropic or TypeSafe. Idea from
-> [Astra-Ares](https://github.com/miuuyy/Astra-Ares), which does the same for Codex.
+## Summary
 
-```sh
-npx jev-effort
-```
+[Jev](https://openrouter.ai/typesafe/jev-1.13) is TypeSafe's small, cheap decision model. After
+[Astra-Ares](https://github.com/miuuyy/Astra-Ares) used it to choose GPT-6 Astra's reasoning
+effort per step in Codex, several tools appeared doing the same for Claude. The pitch: most
+agent steps are routine, so run them at low effort and keep deep reasoning for the hard ones.
 
-That's the whole setup: the first run asks for a Jev key, then starts Claude Code. Use it
-exactly like `claude`: `jev-effort --resume`, `jev-effort -p "…"`, and so on.
+I built a proxy that does this for Claude Code without breaking the prompt cache, confirmed it
+works, then measured what it saves.
 
-**Will it save you money?** Only if hidden thinking is a meaningful share of what your sessions
-*cost*. Effort mostly changes thinking, but in long Claude Code sessions most of the money goes
-to re-reading and writing the cached context, not to output. On our benchmark Jev cut thinking
-by 46% and total cost by about 1%. Run shadow mode first: `jev-effort stats` prices your own
-sessions and estimates the saving before you change anything. See [Results](#results).
+| Test | Result |
+| --- | --- |
+| Real sessions in shadow mode (310 steps, $86.79) | Jev would lower effort on 86% of steps. Estimated saving: **$1.62 (1.9%)** |
+| Where that money went | **91.5%** reading and writing cached context, **4.8%** hidden thinking |
+| Controlled benchmark (24 sessions, hidden tests) | Thinking **−46%**, total cost **−1.1%**, every test passed in both arms |
 
-## Try it without risk first
+Effort changes how much the model thinks. In long Claude Code sessions the bill is dominated by
+the context re-read on every step, which effort doesn't touch.
 
-```sh
-npx jev-effort --jev-shadow     # Jev picks are logged, nothing about your session changes
-npx jev-effort stats            # what Jev would have done
-```
+## Background
 
-Shadow mode never delays or modifies a request: Jev runs alongside it. When you're
-comfortable, drop `--jev-shadow`.
+- Claude Code runs a whole session at one effort level (`/effort`: low, medium, high, xhigh,
+  max).
+- Opus 5.5, Fable 5.1, Mythos 5.1, and Opus 5 accept a
+  [per-message effort change](https://platform.claude.com/docs/en/build-with-claude/effort#change-effort-mid-conversation-beta):
+  an effort-only system message inside `messages` that leaves the cached prefix intact. So
+  effort can change on every step without re-processing the conversation.
+- Research on per-step effort selection ([ARES](https://arxiv.org/abs/2603.07915),
+  [TAB](https://arxiv.org/abs/2604.05164)) reports token savings of 35–53%. Both count tokens,
+  not dollars. The open question was what per-step effort does to the total cost of real Claude
+  Code sessions.
+
+## Method
+
+**1. Mechanism.** `jev-effort` runs `claude` behind a local proxy (`ANTHROPIC_BASE_URL`). Before
+each model request it sends Jev a trimmed view of the conversation (prompts, Claude's visible
+replies, the last six tool calls) and asks two questions: which effort the next step needs, and
+for how many steps to keep it. It applies the answer by appending an effort-only system message,
+and re-inserts earlier ones at their original positions so each request begins with the previous
+one. Jev may lower effort but never exceed the session's own setting.
+
+**2. Verification.** On a hard counting problem, a `low` marker produced 438–548 output tokens
+and `max` produced 1,528–1,809, in line with Claude Code's own `--effort` (438 and 1,733). With
+effort alternating on every step, each request read the full previous prefix from cache. Across
+the real sessions: 0 unexpected cache misses in 283 checked steps.
+
+**3. Shadow mode on real work.** My normal Claude Code use for one day (September 23, 2026): 6
+sessions, 310 model steps, Opus 5.5, Claude Code 2.1.280, sessions at `high` and `max`. For every
+step, Jev's choice was logged and nothing was changed. Each request was priced at Claude API list
+prices from the usage the API reported: cache reads, cache writes, output, and hidden thinking.
+
+**4. Controlled benchmark.** Six small coding tasks, each with a visible test and hidden checks.
+Each task ran from identical files twice, once at fixed `high` and once with Jev choosing (capped
+at `high`), for two rounds: 24 headless Claude Code sessions. A warm-up run came first so neither
+arm paid to cache the other's system prompt.
 
 ## Results
 
-### Your sessions (shadow mode)
+### Where the money went
 
-<!-- TODO(maintainer): fill in from `jev-effort stats --share` after running shadow mode on real work. -->
-_Coming soon: numbers from real day-to-day sessions._ In `jev-effort stats`, look at
-**What Jev could save**: thinking's share of spend (the ceiling), an estimate calibrated to the
-benchmark, Jev's own cost, and what one extra step costs at your context size. If the net
-saving is worth less than one or two extra steps, lower effort can easily cost more than it
-saves.
+Opus 5.5 list prices: $0.20 per million tokens read from cache, $8 per million written to the
+one-hour cache, $20 per million output tokens. I'm on a subscription, so these are
+API-equivalent figures, not a bill.
+
+| Category | Spend | Share |
+| --- | ---: | ---: |
+| Cache writes | $41.32 | 47.6% |
+| Cache reads | $38.08 | 43.9% |
+| Hidden thinking | $4.19 | 4.8% |
+| Visible output | $3.17 | 3.7% |
+| Uncached input | $0.04 | 0.0% |
+| **Total** | **$86.79** | |
+
+Sessions averaged 633K tokens of context per step, re-read every time. Thinking was 57% of output
+*tokens* but 4.8% of *dollars*.
+
+### What Jev chose
+
+| Effort | Claude Code's setting | Jev's pick |
+| --- | ---: | ---: |
+| low | 0 | 78 |
+| medium | 6 | 99 |
+| high | 140 | 115 |
+| xhigh | 0 | 0 |
+| max | 164 | 18 |
+
+Jev lowered effort on 268 of 310 steps. In `high` sessions it couldn't go higher. In `max`
+sessions it could, and mostly didn't: of 164 steps it kept 18 at max, moved 96 to high, and 50 to
+medium or low. It never chose xhigh.
+
+### What it would save
+
+| | Amount | Share of spend |
+| --- | ---: | ---: |
+| Ceiling: all thinking removed on the 267 steps Jev would lower | $3.65 | 4.2% |
+| Estimate: at the 46% thinking reduction measured in the benchmark | $1.68 | 1.9% |
+| Jev's own cost (1.4M input tokens) | −$0.06 | |
+| **Net** | **$1.62** | **1.9%** |
+
+**The break-even is thin.** At 633K tokens of context, one extra step costs about $0.13 to
+re-read. The whole net saving equals about 13 extra steps across 267 lowered ones: if lower effort
+makes Claude take roughly 5% more steps, it loses money. Shadow mode can't observe that.
+
+**Effort level matters more than Jev.** Thinking's share of each session's spend:
+
+| Session effort | Sessions | Thinking share of spend |
+| --- | ---: | ---: |
+| high | 4 | 0.9–2.3% |
+| max | 2 | 7.3–9.0% |
+
+At `high` there is almost nothing to save. At `max` there is a few percent.
 
 ### Controlled benchmark
 
-`jev-effort bench --runs 2`: six small coding tasks, each run from the same files at a fixed
-`high` effort and with Jev choosing per step (capped at `high`). Hidden checks decide pass/fail.
-Opus 5.5, Claude Code 2.1.280, 2026-09-23. Raw data:
-[docs/results/](docs/results/2026-09-23-opus-5-5-high.json).
+| | Fixed high | Jev | Change |
+| --- | ---: | ---: | ---: |
+| Hidden checks passed | 12/12 | 12/12 | |
+| Thinking tokens | 1,450 | 787 | −45.7% |
+| Output tokens | 20,281 | 20,515 | +1.2% |
+| Cost | $1.94 | $1.92 | −1.1% |
+| Wall time | 393 s | 417 s | +6% |
 
-| Task | Pass (fixed / Jev) | Cost (fixed / Jev) | Output tokens (fixed / Jev) | Thinking tokens (fixed / Jev) | Jev's effort mix |
-| --- | --- | --- | --- | --- | --- |
-| expr-eval | 2/2 / 2/2 | $0.428 / $0.430 | 6706 / 6947 | 796 / 458 | low 5, medium 6 |
-| interval-merge | 2/2 / 2/2 | $0.253 / $0.265 | 1950 / 2096 | 112 / 39 | low 4, medium 4 |
-| lru-cache | 2/2 / 2/2 | $0.245 / $0.277 | 1884 / 2390 | 100 / 0 | low 3, medium 5 |
-| paginate-bug | 2/2 / 2/2 | $0.330 / $0.290 | 3521 / 3000 | 121 / 35 | low 2, medium 6 |
-| rename-refactor | 2/2 / 2/2 | $0.373 / $0.363 | 3806 / 3825 | 241 / 255 | low 10, high 2 |
-| stats-bugs | 2/2 / 2/2 | $0.311 / $0.293 | 2414 / 2257 | 80 / 0 | low 7, medium 2 |
-| **Total** | 12/12 / 12/12 | $1.941 / $1.918 (−1.1%) | 20,281 / 20,515 (+1.2%) | 1,450 / 787 (−45.7%) | 55 Jev calls |
+Per-task results: [docs/results/](docs/results/2026-09-23-opus-5-5-high.json).
 
-What this shows:
+## Interpretation
 
-- **The mechanism works.** Jev lowered effort on most steps, hidden thinking fell 46%, every
-  run still passed its hidden checks, and the prompt cache kept hitting.
-- **On these tasks it saved nothing.** Opus 5.5 at `high` spends only about 7% of its output
-  on thinking for small, well-specified tasks, so cutting thinking barely moves the total.
-  Total output and cost changed by about 1%, within run-to-run noise. Wall time was 6% longer
-  (about 300 ms per Jev call).
-- **Where it could matter:** sessions where Claude thinks a lot (hard debugging, design work,
-  `xhigh`/`max` sessions) with many routine steps in between. Shadow mode tells you whether
-  your sessions look like that before you change anything.
-
-## Requirements
-
-- **Node 20+** and **Claude Code** (verified with 2.1.280).
-- **Model: Opus 5.5** (verified). Fable 5.1, Mythos 5.1, and Opus 5 support per-message effort
-  according to Anthropic's docs but haven't been verified here. Other models pass through
-  untouched.
-- **Claude API key or Claude subscription.** On Bedrock, Google Cloud, or Foundry,
-  jev-effort steps aside and runs plain `claude`.
-- **A Jev key**, from any of: [OpenRouter](https://openrouter.ai/settings/keys) (`sk-or-…`),
-  [TypeSafe](https://console.typesafe.ai), or Vercel AI Gateway (`vck_…`). OpenRouter lists
-  Jev at $0.042 per million input tokens with free output; a decision uses 1-3K tokens.
-
-## How it works
-
-```
-claude ──► jev-effort proxy (127.0.0.1) ──► api.anthropic.com
-                   │
-                   └──► Jev: "which effort does the next step need, and for how long?"
-```
-
-- `jev-effort` runs `claude` with `ANTHROPIC_BASE_URL` pointed at a private local proxy for
-  that session only. Your `claude` command and settings aren't changed.
-- Before each main-model step, Jev gets a trimmed view of the conversation and picks an
-  effort plus a lease (how many steps to keep it). No Jev call during a lease.
-- The effort is applied with an effort-only system message appended to the request, using
-  Anthropic's [per-message effort](https://platform.claude.com/docs/en/build-with-claude/effort#change-effort-mid-conversation-beta)
-  beta. Earlier markers are re-inserted exactly where they were, so every request starts
-  with the previous one and the cache keeps hitting.
-- **By default Jev can only lower effort**, never above your `/effort` setting. Allow raising
-  with `--jev-ceiling max`.
-- **Everything fails open.** If Jev is slow or down, or anything goes wrong, the request goes
-  out exactly as Claude Code built it.
-
-Details and measurements: [docs/how-it-works.md](docs/how-it-works.md).
-
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `jev-effort [claude args]` | Run Claude Code with per-step effort |
-| `jev-effort --jev-shadow [claude args]` | Log Jev's picks without applying them |
-| `jev-effort stats [--since 7d] [--share] [--json]` | Where your spend goes, what Jev could save, per-session breakdown, Jev latency, cache health; `--share` prints a paste-safe summary |
-| `jev-effort bench [--tasks a,b] [--runs N] [--effort high]` | Controlled comparison: fixed effort vs Jev on six coding tasks with hidden checks |
-| `jev-effort doctor [--probe]` | Check the setup and explain what will happen |
-| `jev-effort setup [--key-file path \| --key-stdin] [--provider p] [--mode m]` | Add or replace the Jev key and defaults |
-| `jev-effort serve [--port 8787]` | Standalone proxy, for tools that launch Claude Code themselves |
-
-Options for a Claude Code run all start with `--jev-` (everything else goes to `claude`):
-`--jev-shadow`, `--jev-mode apply|shadow|off`, `--jev-floor <effort>`,
-`--jev-ceiling <effort|session>`, `--jev-quiet`.
-
-To use it everywhere: `npm install -g jev-effort`, then optionally `alias claude=jev-effort`
-in your shell profile (jev-effort itself still finds the real `claude`).
-
-## Configuration
-
-`~/.config/jev-effort/config.json` (written by `jev-effort setup`, mode 0600):
-
-| Field | Default | Meaning |
-| --- | --- | --- |
-| `mode` | `apply` | `apply`, `shadow`, or `off` |
-| `floor` | `low` | Lowest effort Jev may choose |
-| `ceiling` | `session` | Highest; `session` means your `/effort` setting |
-| `provider` | `auto` | `openrouter`, `typesafe`, `vercel`; `auto` guesses from the key |
-| `apiKey` / `apiKeyFile` / `apiKeyEnv` | | Where the Jev key comes from |
-| `maxLeaseSteps` | `10` | Longest lease Jev may grant (1, 2, 5, or 10) |
-| `jevTimeoutMs` | `5000` | Give up on Jev after this long and use your effort |
-| `claudePath` | `claude` | The Claude Code executable |
-
-Environment: `JEV_API_KEY` (or `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `AI_GATEWAY_API_KEY`),
-`JEV_EFFORT_MODE`, `JEV_EFFORT_CONFIG_DIR`, `JEV_EFFORT_DATA_DIR`.
-
-## Privacy
-
-- **Jev sees** your prompts, Claude's visible replies, and the last six tool calls with trimmed
-  output (about 1,000 tokens each), which can include code. Only while jev-effort is running.
-- **Your Claude credentials** pass through the local proxy untouched and are never stored.
-- **Local logs** hold counts, effort choices, timings, and session ids, never prompt or code
-  text. `stats --share` output has no ids.
-- No telemetry. See [SECURITY.md](SECURITY.md).
+- **The mechanism works.** Jev roughly halves thinking, the cache survives, and quality held on
+  the benchmark.
+- **It barely moves cost.** In long, cached sessions, context dominates the bill. The best case is
+  `max` sessions, at a few percent.
+- **It adds latency.** Jev took 747 ms median and 3.8 s at p95 per decision, with 18 timeouts.
+  Applied live, that would have added about 5.5 minutes of waiting to the day.
+- **A per-user savings tracker wouldn't be meaningful.** Per-prompt cost had a standard
+  deviation of 1.8× its average, so confirming a 2% difference directly would take tens of
+  thousands of randomized prompts.
+- **The real cost drivers are elsewhere.** Returning to a conversation after the one-hour cache
+  expired cost $18.17 (4 times, each re-writing the whole context). Five conversations began with
+  281K–500K tokens already in context, costing $16.25. Each is about ten times Jev's total saving.
+  Context size is the lever: Opus 5.5 with the 1M window doesn't auto-compact until about 967K
+  tokens.
 
 ## Limitations
 
-- It depends on how Claude Code builds requests, which isn't a public interface. A Claude
-  Code update could change it; `jev-effort doctor` warns on newer versions, and
-  `jev-effort stats` reports rejected rewrites and unexpected cache misses.
-- Each Jev call adds about 300 ms before a step (none during leases or in shadow mode).
-- Corporate HTTPS proxies (`HTTPS_PROXY`) aren't supported yet; jev-effort runs plain `claude`.
-- IDE extensions and the desktop app launch Claude Code themselves; use `jev-effort serve` and
-  set `ANTHROPIC_BASE_URL` where they allow it.
-- Windows is untested.
+- One developer, one day, six sessions, one model. Short sessions or small repositories could
+  show a larger thinking share.
+- Dollar figures apply API list prices to subscription usage. How plan limits weigh each token
+  type isn't published.
+- The shadow-mode estimate borrows the benchmark's 46% thinking reduction. Shadow mode can't
+  measure quality or extra steps on real work.
+- The benchmark tasks are small. Two runs per task is enough to see the direction, not a precise
+  effect size.
+
+## Notes on Claude Code internals
+
+Found while building this; details and evidence in [docs/how-it-works.md](docs/how-it-works.md).
+
+- Claude Code already sends per-turn effort on a system message right after the prompt (beta
+  `per-turn-control-2026-07-01`). The latest effort setting in a request wins, so an injected
+  marker must be the last message. Rewriting the top-level `output_config.effort` is silently
+  overridden.
+- Claude Code re-sends some messages as a plain string after first sending them as text blocks.
+  The API caches both the same way, but anything that hashes the history must normalize them.
+- Claude Code 2.1.260+ has early-access "function hooks" (`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`).
+  A `turn.step` hook can rewrite effort per request, and Claude Code then inserts the same
+  cache-safe markers itself.
+
+## Reproduce
+
+```sh
+npx jev-effort --jev-shadow          # use like `claude`; logs Jev's choices, changes nothing
+npx jev-effort stats                 # where your spend goes and what Jev would save
+npx jev-effort stats --share         # the same, safe to paste (no prompts or ids)
+npx jev-effort bench --runs 2        # the controlled comparison (uses your Claude usage)
+```
+
+Setup, configuration, and privacy details: [docs/usage.md](docs/usage.md). The data behind this
+page: [shadow sessions](docs/results/2026-09-23-shadow-sessions.json) and
+[benchmark](docs/results/2026-09-23-opus-5-5-high.json). If your numbers look different,
+especially with heavy `max` use, please open an issue with `jev-effort stats --share`.
 
 ## Related work
 
-Checked 2026-09-23. Almost all of this appeared within days of Astra-Ares.
+| Project | Approach |
+| --- | --- |
+| [Astra-Ares](https://github.com/miuuyy/Astra-Ares) | The original: Jev picks GPT-6 Astra's effort per step in Codex. jev-effort adapts its Jev prompt wording (MIT) |
+| [jev-opus](https://github.com/WXK-AI/jev-opus) | Same proxy approach for Claude Code, plus work-phase adjustments |
+| [jev-model-router](https://github.com/moelahmady/jev-model-router) | Claude Code function hooks; effort per prompt, optional model routing |
+| [effort-router](https://github.com/handpickedlab/effort-router) | Claude Code plugin; effort per task |
+| [ARES](https://arxiv.org/abs/2603.07915), [TAB](https://arxiv.org/abs/2604.05164) | Research on per-step and per-turn reasoning budgets |
 
-**Tools**
+None of these, as of September 23, 2026, reports total cost against a fixed-effort baseline.
 
-| Project | Approach | How often effort changes |
-| --- | --- | --- |
-| [Astra-Ares](https://github.com/miuuyy/Astra-Ares) | Patched Codex, GPT-6 Astra. The original idea; jev-effort adapts its Jev prompt wording | Every step, with leases |
-| [jev-opus](https://github.com/WXK-AI/jev-opus) | Proxy with per-message effort markers, like jev-effort; adds work-phase adjustments (lower while exploring, higher while diagnosing) and raises effort after tool failures | Every step |
-| [jev-model-router](https://github.com/moelahmady/jev-model-router) | Claude Code's early-access function hooks; optional model routing | Once per prompt |
-| [effort-router](https://github.com/handpickedlab/effort-router) | Claude Code plugin; raises effort in stuck sessions | Per task |
-| [jev-adaptive-effort](https://github.com/robertovoyk-ctrl/jev-adaptive-effort) | Custom Python agent on the Claude API, not Claude Code | Every step |
-| [jev-subagent-router](https://github.com/DefensiveSniper/jev-subagent-router) | Picks model and effort when a subagent is spawned | Per subagent |
+## License
 
-None of these, as of this writing, compares total cost against a fixed-effort baseline.
-
-**Research.** [ARES](https://arxiv.org/abs/2603.07915) (a trained per-step router) reports up to
-52.7% fewer reasoning tokens with minimal loss in task success;
-[TAB](https://arxiv.org/abs/2604.05164) (per-turn budgets learned with RL) reports up to 35%
-fewer tokens. Both measure reasoning tokens, not total spend. jev-effort's benchmark agrees on
-that number (46% less thinking) but finds total cost barely moves in cached Claude Code
-sessions, because re-reading context dominates the bill.
-
-**Claude Code itself** has no adaptive effort: `/effort auto` was
-[an alias for `max`](https://github.com/anthropics/claude-code/issues/50328). Its early-access
-**function hooks** (2.1.260+, behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`) let a plugin's
-`turn.step` hook rewrite effort for each model request. In a test on 2.1.280, Claude Code then
-inserted the same effort-only markers jev-effort uses and the cache held on every step. That is
-a likely future home for this approach once the API is stable; see
-[docs/how-it-works.md](docs/how-it-works.md#native-alternative-function-hooks-early-access).
-
-**Where jev-effort differs:** measurement. Shadow mode, stats that price your spend, and a
-benchmark with hidden checks answer whether per-step effort is worth it for you.
-
-## Uninstall
-
-```sh
-npm uninstall -g jev-effort
-rm -rf ~/.config/jev-effort ~/.local/share/jev-effort
-```
-
-## Contributing
-
-Real-world numbers are the most useful thing right now: run shadow mode for a few days and
-open a "Share results" issue with `jev-effort stats --share`. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
-
-MIT license. Jev question wording adapted from Astra-Ares (MIT); see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the Astra-Ares attribution.
