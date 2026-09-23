@@ -44,7 +44,11 @@ test("errors are categorized", async () => {
   const auth = new JevClient({ key: "k", provider: "openrouter", fetchImpl: respond(401, { error: { message: "Missing Authentication header" } }) });
   await assert.rejects(auth.decide(PROBE_STATE, [1]), (e) => e.category === "auth" && /401/.test(e.message));
   const slow = new JevClient({ key: "k", provider: "openrouter", timeoutMs: 500, fetchImpl: (_, init) => new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason))) });
+  // AbortSignal.timeout doesn't hold the event loop open; before Node 24 the test runner
+  // would give up on the pending promise. (In real use the proxy server keeps it alive.)
+  const keepAlive = setTimeout(() => {}, 5000);
   await assert.rejects(slow.decide(PROBE_STATE, [1]), (e) => e.category === "timeout");
+  clearTimeout(keepAlive);
 });
 
 test("repeated failures open the circuit for a while", async () => {
