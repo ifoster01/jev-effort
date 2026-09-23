@@ -161,6 +161,10 @@ Per-task results: [docs/results/](docs/results/2026-09-23-opus-5-5-high.json).
   type isn't published.
 - The shadow-mode estimate borrows the benchmark's 46% thinking reduction. Shadow mode can't
   measure quality or extra steps on real work.
+- Behind any proxy, Claude Code drops a few direct-connection features, including claude.ai-backed
+  tools such as Artifacts, so each request carried about 4K fewer tokens than a direct session
+  would. jev-effort restores tool search, tool streaming, and hint headers
+  ([details](docs/usage.md#limitations)).
 - The benchmark tasks are small. Two runs per task is enough to see the direction, not a precise
   effect size.
 
@@ -174,6 +178,10 @@ Found while building this; details and evidence in [docs/how-it-works.md](docs/h
   overridden.
 - Claude Code re-sends some messages as a plain string after first sending them as text blocks.
   The API caches both the same way, but anything that hashes the history must normalize them.
+- Any custom `ANTHROPIC_BASE_URL` makes Claude Code turn off MCP tool search, loading every MCP
+  tool definition into every request. With several MCP servers, a fresh session started at
+  281K–500K tokens instead of 27K. `ENABLE_TOOL_SEARCH=true` restores it when the proxy forwards
+  `tool_reference` blocks.
 - Claude Code 2.1.260+ has early-access "function hooks" (`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`).
   A `turn.step` hook can rewrite effort per request, and Claude Code then inserts the same
   cache-safe markers itself.

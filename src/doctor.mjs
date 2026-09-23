@@ -59,6 +59,7 @@ export async function doctor(argv, { stdout = process.stdout } = {}) {
     if (toolSearch === "true") ok("MCP tool search stays on behind the proxy (ENABLE_TOOL_SEARCH=true)");
     else if (toolSearch) warn(`ENABLE_TOOL_SEARCH=${toolSearch} is set, so behind the proxy Claude Code may load MCP tool definitions into every request. jev-effort's proxy supports ENABLE_TOOL_SEARCH=true.`);
     else warn("MCP tool search will be off behind your gateway, so MCP tool definitions load into every request. Set ENABLE_TOOL_SEARCH=true if the gateway forwards tool_reference blocks.");
+    warn("behind the proxy, Claude Code turns off Remote Control, server-managed settings, and claude.ai-backed tools such as Artifacts. If your organization relies on server-managed settings, don't use jev-effort.");
     if (process.env.ANTHROPIC_BASE_URL) warn(`requests will be forwarded to ANTHROPIC_BASE_URL (${process.env.ANTHROPIC_BASE_URL}); a gateway must pass anthropic-beta headers through.`);
     ok(`manages ${SUPPORTED_MODEL_NAMES.join(", ")} (verified: Opus 5.5); other models pass through untouched`);
 

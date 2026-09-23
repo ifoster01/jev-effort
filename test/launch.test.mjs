@@ -52,8 +52,10 @@ test("tool search and tool streaming stay on behind the proxy, unless the user d
   const direct = "https://api.anthropic.com";
   assert.deepEqual(passthroughEnv({ upstream: direct, env: {} }), PASSTHROUGH_ENV);
   assert.equal(PASSTHROUGH_ENV.ENABLE_TOOL_SEARCH, "true");
-  assert.deepEqual(passthroughEnv({ upstream: direct, env: { ENABLE_TOOL_SEARCH: "false" } }), { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1" });
-  assert.deepEqual(passthroughEnv({ upstream: direct, env: {}, settingsEnv: { ENABLE_TOOL_SEARCH: "auto" } }), { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1" });
+  const { ENABLE_TOOL_SEARCH, ...rest } = PASSTHROUGH_ENV;
+  assert.deepEqual(passthroughEnv({ upstream: direct, env: { ENABLE_TOOL_SEARCH: "false" } }), rest);
+  assert.deepEqual(passthroughEnv({ upstream: direct, env: {}, settingsEnv: { ENABLE_TOOL_SEARCH: "auto" } }), rest);
+  assert.equal(PASSTHROUGH_ENV.CLAUDE_CODE_GATEWAY_HINT_HEADERS, "1");
   assert.deepEqual(passthroughEnv({ upstream: "https://gateway.corp.example", env: {} }), {}, "a user's own gateway keeps Claude Code's defaults");
   assert.ok(isFirstParty("https://api.anthropic.com/"));
   assert.ok(!isFirstParty("https://api.anthropic.com.evil.example"));

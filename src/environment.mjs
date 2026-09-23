@@ -50,6 +50,9 @@ export const PASSTHROUGH_ENV = {
   ENABLE_TOOL_SEARCH: "true",
   // Streaming tool-call arguments as they're generated, as on a direct connection.
   CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1",
+  // Request-class and compaction headers, sent by default on a direct connection. jev-effort
+  // also reads them to leave compaction and side requests (titles, classifiers) alone.
+  CLAUDE_CODE_GATEWAY_HINT_HEADERS: "1",
 };
 
 // The variables to add to the launched Claude Code's environment. A value the user set, in the

@@ -177,3 +177,16 @@ test("an upstream base path is kept (gateways)", async () => {
     await upstream.close();
   }
 });
+
+test("the request class is logged, and side requests leave Jev alone", async () => {
+  const t = await setup();
+  try {
+    await (await t.post(new FakeClaudeCode().request(), { "x-claude-code-request-class": "auxiliary" })).text();
+    assert.equal(t.logger.records[0].requestClass, "auxiliary");
+    assert.equal(t.logger.records[0].managed, false);
+    assert.equal(t.jev.calls.length, 0);
+    assert.equal(t.upstream.received[0].headers["x-claude-code-request-class"], "auxiliary", "hint headers are forwarded as on a direct connection");
+  } finally {
+    await t.done();
+  }
+});

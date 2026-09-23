@@ -17,6 +17,9 @@ import {
   prefixHashes,
 } from "./markers.mjs";
 
+// Claude Code's request classes that aren't steps of the user's task.
+const SIDE_REQUESTS = new Set(["compaction", "auxiliary"]);
+
 export function allowedEfforts(floor, ceiling) {
   const lo = effortRank(floor);
   const hi = effortRank(ceiling);
@@ -34,13 +37,27 @@ export function createPolicy({ config, jev, store, now = Date.now }) {
   const leases = [1, 2, 5, 10].filter((n) => n <= config.maxLeaseSteps);
 
   // mode: "apply" rewrites the request; "shadow" only records what Jev would have chosen.
-  async function evaluate(body, mode) {
+  // requestClass: Claude Code's x-claude-code-request-class hint, when it sends one.
+  async function evaluate(body, mode, { requestClass } = {}) {
     const info = modelInfo(body?.model);
     if (!info) return { managed: false, reason: "unsupported_model" };
     const original = body.messages;
     if (!Array.isArray(original) || nextTurnSlot(original) < 0) return { managed: false, reason: "not_a_turn" };
     const conv = conversationKey(body);
+    if (SIDE_REQUESTS.has(requestClass))
+      return store.withLock(conv, () => sideRequest(conv, body, original, mode, requestClass));
     return store.withLock(conv, () => decide(conv, body, original, info, mode));
+  }
+
+  // Compaction summaries, titles, classifiers: not steps of the work, so Jev isn't asked and no
+  // effort changes. In apply mode the markers already in this history still go back in, so a
+  // request that shares the conversation's prefix keeps reading it from cache.
+  function sideRequest(conv, body, original, mode, requestClass) {
+    const reason = `request_class:${requestClass}`;
+    if (mode !== "apply") return { managed: false, reason };
+    const use = applicableMarkers(store.load(conv).markers, prefixHashes(original));
+    if (!use.length) return { managed: false, reason };
+    return { managed: false, reason, body: { ...body, messages: insertMarkers(original, use) }, addBeta: true, markers: use.length };
   }
 
   async function decide(conv, body, original, info, mode) {

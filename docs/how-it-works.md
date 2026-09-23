@@ -61,7 +61,10 @@ These were found by capturing real requests and are what the design rests on.
   might drop `tool_reference` blocks, so it loads every MCP tool definition into every request
   instead. With several MCP servers connected, a fresh session started at 281K–500K tokens
   instead of 27K. jev-effort's proxy forwards those blocks unchanged, so it sets
-  `ENABLE_TOOL_SEARCH=true` for the Claude Code it launches.
+  `ENABLE_TOOL_SEARCH=true` for the Claude Code it launches. Claude Code also drops other
+  direct-connection behavior behind a proxy (fine-grained tool streaming, request-class hint
+  headers, Remote Control, server-managed settings, claude.ai-backed tools); the full list and
+  what jev-effort restores is in [usage.md](usage.md#limitations).
 - **Thinking is requested with `display: "omitted"`**, so Jev sees Claude's visible text and
   tool activity but no reasoning.
 

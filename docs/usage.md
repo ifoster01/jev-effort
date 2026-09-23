@@ -100,13 +100,19 @@ Environment: `JEV_API_KEY` (or `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `AI_GAT
 - In apply mode each Jev call adds waiting before a step: 747 ms median and 3.8 s at p95 in
   our sessions. There's none during leases or in shadow mode.
 - Corporate HTTPS proxies (`HTTPS_PROXY`) aren't supported; jev-effort runs plain `claude`.
-- Claude Code turns off MCP tool search and fine-grained tool streaming behind any
-  `ANTHROPIC_BASE_URL` proxy. Without tool search, every MCP tool definition loads into every
-  request, which can add hundreds of thousands of tokens. jev-effort turns both back on
-  (`ENABLE_TOOL_SEARCH=true`, `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`) when it forwards
-  to the Claude API directly, unless you've set them yourself. With `jev-effort serve`, set them
-  yourself; the command prints them.
-- Remote Control is disabled while Claude Code runs behind a proxy.
+- **Claude Code behaves differently behind any `ANTHROPIC_BASE_URL` proxy.** jev-effort restores
+  what it safely can when it forwards to the Claude API directly, unless you've set a value
+  yourself (with `jev-effort serve`, set them yourself; the command prints them):
+
+  | Behind a proxy, Claude Code… | jev-effort |
+  | --- | --- |
+  | Turns off MCP tool search, so every MCP tool definition loads into every request (a fresh session went from 27K to 281K–500K tokens) | Sets `ENABLE_TOOL_SEARCH=true` |
+  | Turns off fine-grained tool streaming | Sets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1` |
+  | Stops sending request-class hint headers | Sets `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, and uses them to leave compaction and side requests alone |
+  | Disables Remote Control, server-managed settings, and claude.ai-backed tools such as Artifacts | Can't be restored. **If your organization relies on server-managed settings, don't use jev-effort.** |
+  | Asks the server to review auto-mode actions (directly, only Enterprise and API accounts do) | Unchanged; set `CLAUDE_CODE_AUTO_MODE_SERVER=0` to use Claude Code's own classifier |
+  | May run background tasks such as titles on the main model rather than Haiku | Unchanged; `ANTHROPIC_DEFAULT_HAIKU_MODEL` pins a model |
+  | Budgets Sonnet 5 at 200K context | Unchanged; select `sonnet[1m]` for the full window |
 - IDE extensions and the desktop app launch Claude Code themselves; use `jev-effort serve` and
   set `ANTHROPIC_BASE_URL` where they allow it.
 - Windows is untested.

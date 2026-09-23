@@ -204,7 +204,9 @@ export function createProxy({ upstream = "https://api.anthropic.com", mode, poli
       model: body.model,
       messages: Array.isArray(body.messages) ? body.messages.length : undefined,
     };
-    const note = (r) => Object.assign(rec, r.managed ? { managed: true, ...r.record } : { managed: false, reason: r.reason });
+    const requestClass = req.headers["x-claude-code-request-class"];
+    if (requestClass) rec.requestClass = String(requestClass).slice(0, 40);
+    const note = (r) => Object.assign(rec, r.managed ? { managed: true, ...r.record } : { managed: false, reason: r.reason, ...(r.markers ? { markers: r.markers } : {}) });
 
     let sendBody = raw;
     let sendHeaders = headers;
@@ -212,9 +214,9 @@ export function createProxy({ upstream = "https://api.anthropic.com", mode, poli
     let background = null;
     if (activeMode === "apply") {
       try {
-        const r = await policy.evaluate(body, "apply");
+        const r = await policy.evaluate(body, "apply", { requestClass });
         note(r);
-        if (r.managed && r.addBeta) {
+        if (r.addBeta && r.body) {
           sendBody = Buffer.from(JSON.stringify(r.body));
           sendHeaders = withBeta(headers);
           modified = true;
@@ -224,7 +226,7 @@ export function createProxy({ upstream = "https://api.anthropic.com", mode, poli
       }
     } else if (activeMode === "shadow") {
       // Shadow never delays the request: Jev runs alongside it.
-      background = policy.evaluate(body, "shadow").then(note, (e) => {
+      background = policy.evaluate(body, "shadow", { requestClass }).then(note, (e) => {
         rec.policyError = String(e?.message ?? e).slice(0, 300);
       });
     }

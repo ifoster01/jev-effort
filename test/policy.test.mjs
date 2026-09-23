@@ -190,3 +190,24 @@ test("state survives a restart (a new process, same store directory)", async () 
   const second = await p2.evaluate(cc.request(), "apply");
   assert.ok(isPrefix(first.body.messages, second.body.messages));
 });
+
+test("compaction and side requests don't consult Jev, and keep the conversation's markers", async () => {
+  const { policy, jev } = policyWith([{ effort: "low", leaseSteps: 1 }, { effort: "high", leaseSteps: 1 }]);
+  const cc = new FakeClaudeCode();
+  const first = await policy.evaluate(cc.request(), "apply", { requestClass: "main" });
+  cc.step();
+  const compaction = cc.clone();
+  compaction.messages.push({ role: "user", content: [{ type: "text", text: "Summarize the conversation so far." }] });
+  const c = await policy.evaluate(compaction.request(), "apply", { requestClass: "compaction" });
+  assert.equal(c.managed, false);
+  assert.equal(c.reason, "request_class:compaction");
+  assert.ok(isPrefix(first.body.messages, c.body.messages), "compaction still reads the cached prefix");
+  assert.equal(jev.calls.length, 1);
+  const title = await policy.evaluate(new FakeClaudeCode({ prompt: "Write a title" }).request(), "apply", { requestClass: "auxiliary" });
+  assert.deepEqual([title.managed, title.body], [false, undefined]);
+  const shadow = await policy.evaluate(compaction.request(), "shadow", { requestClass: "compaction" });
+  assert.deepEqual(shadow, { managed: false, reason: "request_class:compaction" });
+  const next = await policy.evaluate(cc.request(), "apply", { requestClass: "main" });
+  assert.equal(next.record.step, 2, "side requests don't count as steps");
+  assert.equal(jev.calls.length, 2);
+});
