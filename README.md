@@ -6,6 +6,12 @@ it on a day of real sessions. It would have saved about 2%.**
 > A research project. The code works and the results are reproducible, but it isn't
 > recommended as a cost-saving tool. Unofficial; not affiliated with Anthropic or TypeSafe.
 
+> **Correction in progress (0.1.2).** The real-session figures below were inflated by a bug:
+> behind the proxy, Claude Code turned off MCP tool search, so every MCP tool definition was
+> loaded into every request. That's fixed, and the sessions are being re-measured. A rough
+> correction puts Jev's saving at about 4–5% rather than 2%. The benchmark results are
+> unaffected.
+
 ## Summary
 
 [Jev](https://openrouter.ai/typesafe/jev-1.13) is TypeSafe's small, cheap decision model. After
