@@ -1,6 +1,6 @@
 {
   "name": "jev-effort",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Per-step, cache-preserving reasoning effort for Claude Code, chosen by the Jev classifier. Unofficial.",
   "repository": {
     "type": "git",

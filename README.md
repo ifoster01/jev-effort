@@ -17,9 +17,11 @@ npx jev-effort
 That's the whole setup: the first run asks for a Jev key, then starts Claude Code. Use it
 exactly like `claude`: `jev-effort --resume`, `jev-effort -p "…"`, and so on.
 
-**Will it save you money?** It depends on how much Claude thinks in your sessions. On a small
-benchmark it cut hidden thinking by 46% but total cost by only about 1%; see
-[Results](#results). Shadow mode measures your own sessions without changing anything.
+**Will it save you money?** Only if hidden thinking is a meaningful share of what your sessions
+*cost*. Effort mostly changes thinking, but in long Claude Code sessions most of the money goes
+to re-reading and writing the cached context, not to output. On our benchmark Jev cut thinking
+by 46% and total cost by about 1%. Run shadow mode first: `jev-effort stats` prices your own
+sessions and estimates the saving before you change anything. See [Results](#results).
 
 ## Try it without risk first
 
@@ -36,9 +38,11 @@ comfortable, drop `--jev-shadow`.
 ### Your sessions (shadow mode)
 
 <!-- TODO(maintainer): fill in from `jev-effort stats --share` after running shadow mode on real work. -->
-_Coming soon: numbers from real day-to-day sessions._ The number to watch in
-`jev-effort stats` is the **hidden thinking share** of output tokens: effort mostly changes
-thinking, so that share is the ceiling on what jev-effort can save you.
+_Coming soon: numbers from real day-to-day sessions._ In `jev-effort stats`, look at
+**What Jev could save**: thinking's share of spend (the ceiling), an estimate calibrated to the
+benchmark, Jev's own cost, and what one extra step costs at your context size. If the net
+saving is worth less than one or two extra steps, lower effort can easily cost more than it
+saves.
 
 ### Controlled benchmark
 
@@ -110,7 +114,7 @@ Details and measurements: [docs/how-it-works.md](docs/how-it-works.md).
 | --- | --- |
 | `jev-effort [claude args]` | Run Claude Code with per-step effort |
 | `jev-effort --jev-shadow [claude args]` | Log Jev's picks without applying them |
-| `jev-effort stats [--since 7d] [--share] [--json]` | Effort mix, Jev latency, cache health; `--share` prints a paste-safe summary |
+| `jev-effort stats [--since 7d] [--share] [--json]` | Where your spend goes, what Jev could save, per-session breakdown, Jev latency, cache health; `--share` prints a paste-safe summary |
 | `jev-effort bench [--tasks a,b] [--runs N] [--effort high]` | Controlled comparison: fixed effort vs Jev on six coding tasks with hidden checks |
 | `jev-effort doctor [--probe]` | Check the setup and explain what will happen |
 | `jev-effort setup [--key-file path \| --key-stdin] [--provider p] [--mode m]` | Add or replace the Jev key and defaults |

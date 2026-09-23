@@ -135,6 +135,10 @@ const pickUsage = (u) =>
     output: u.output_tokens ?? 0,
     // Hidden thinking, the part of the output that effort mainly controls.
     ...(u.output_tokens_details?.thinking_tokens != null ? { thinking: u.output_tokens_details.thinking_tokens } : {}),
+    // Cache lifetime of the writes, which are priced differently (1h costs 1.6x a 5m write).
+    ...(u.cache_creation
+      ? { cacheWrite1h: u.cache_creation.ephemeral_1h_input_tokens ?? 0, cacheWrite5m: u.cache_creation.ephemeral_5m_input_tokens ?? 0 }
+      : {}),
   };
 
 // mode: "apply" | "shadow" | "off". tag: optional label copied into every log record.
