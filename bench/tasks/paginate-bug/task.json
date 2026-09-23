@@ -1,0 +1,4 @@
+{
+  "description": "Fix an off-by-one pagination helper against its documented contract.",
+  "prompt": "paginate.js doesn't match its doc comment. Fix it and make node test.js pass. Be brief."
+}

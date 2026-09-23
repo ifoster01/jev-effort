@@ -1,0 +1,4 @@
+{
+  "description": "Implement interval merging from a doc comment, including edge cases the visible test doesn't cover.",
+  "prompt": "Implement mergeIntervals in intervals.js so it matches its doc comment exactly, then run node test.js. Be brief."
+}

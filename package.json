@@ -1,0 +1,43 @@
+{
+  "name": "jev-effort",
+  "version": "0.1.0",
+  "description": "Per-step, cache-preserving reasoning effort for Claude Code, chosen by the Jev classifier. Unofficial.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifoster01/jev-effort.git"
+  },
+  "homepage": "https://github.com/ifoster01/jev-effort#readme",
+  "bugs": {
+    "url": "https://github.com/ifoster01/jev-effort/issues"
+  },
+  "type": "module",
+  "bin": {
+    "jev-effort": "bin/jev-effort.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "bench/",
+    "docs/",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "reasoning-effort",
+    "prompt-caching",
+    "jev",
+    "cli"
+  ],
+  "license": "MIT"
+}

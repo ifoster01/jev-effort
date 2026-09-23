@@ -1,0 +1,4 @@
+{
+  "description": "Implement an LRU cache class from its doc comment.",
+  "prompt": "Implement the LRUCache class in lru.js as its doc comment describes, then run node test.js. Be brief."
+}

@@ -1,0 +1,4 @@
+{
+  "description": "Find and fix two bugs in a small statistics module (lexicographic sort, push counted as a win).",
+  "prompt": "Run node test.js, find and fix the bugs in stats.js, and rerun the test until it passes. Be brief."
+}

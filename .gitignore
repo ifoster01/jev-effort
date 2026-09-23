@@ -1,0 +1,5 @@
+node_modules/
+.work/
+poc-logs/
+*.log
+.DS_Store

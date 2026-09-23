@@ -1,0 +1,4 @@
+{
+  "description": "Routine multi-file rename across definitions, callers, and tests.",
+  "prompt": "Rename the function calcOdds to impliedProbability everywhere in this project (definition, exports, imports, callers, tests, comments) without changing behavior, then run node test.js. Be brief."
+}

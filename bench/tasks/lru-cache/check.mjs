@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+
+const { LRUCache } = createRequire(import.meta.url)(join(process.argv[2], "lru.js"));
+let c = new LRUCache(2);
+c.set("a", 1);
+c.set("b", 2);
+assert.equal(c.get("a"), 1);
+c.set("c", 3);
+assert.equal(c.get("b"), undefined, "get should refresh recency");
+assert.equal(c.get("a"), 1);
+c.set("a", 10);
+c.set("d", 4);
+assert.equal(c.get("a"), 10, "set on an existing key should refresh recency");
+assert.equal(c.get("c"), undefined);
+assert.equal(c.size, 2);
+c = new LRUCache(0);
+c.set("x", 1);
+assert.equal(c.get("x"), undefined);
+assert.equal(c.size, 0);
+c = new LRUCache(3);
+c.set(1, "number");
+c.set("1", "string");
+assert.equal(c.get(1), "number");
+assert.equal(c.get("1"), "string");
+assert.equal(c.size, 2);
