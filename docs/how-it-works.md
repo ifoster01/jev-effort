@@ -122,6 +122,32 @@ Everything fails toward what Claude Code would have done anyway:
 | Any internal error | The original request is forwarded unchanged |
 | Unsupported model, Bedrock/Vertex/Foundry, HTTPS proxy, or `ANTHROPIC_BASE_URL` in Claude Code settings | Plain `claude` runs, with a one-line notice |
 
+## Native alternative: function hooks (early access)
+
+Claude Code 2.1.260+ ships an early-access plugin API, "function hooks", switched on with
+`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and documented only by the declarations `/plugin-types`
+writes ("EARLY ACCESS: this surface may change between releases without notice"). Its
+`turn.step` event wraps each model request, and its input is
+`{ turnId, index, model, effort?, messageCount, agentId? }`: a hook may rewrite `model` and
+`effort`, and the rest is pinned. A hook can read the conversation with
+`$.session.messages({ as: "api" })` and reach Jev with `$.http.fetch`.
+
+A minimal plugin (`hooks/hooks.json` naming one module whose `turn.step` hook calls
+`next({ ...e, effort })`), loaded with `--plugin-dir` on 2.1.280 behind the proxy in logging
+mode:
+
+| Check | Result |
+| --- | --- |
+| Effort honored | Counting prompt: 522 thinking tokens forced `low`, 1,678 forced `max` |
+| How Claude Code applies it | Step 0: sets the effort on its own environment message. Later steps: appends an empty effort-only system message and keeps every earlier one, the same markers jev-effort inserts |
+| Cache, alternating low/high every step | Each read equals the previous read plus write: 24,961 → 34,293 → 35,022 → 35,304 → 35,660 |
+
+So a plugin could replace the proxy: no marker bookkeeping, no `ANTHROPIC_BASE_URL`, and it
+would work anywhere function hooks load. Trade-offs today: the API is early access and may
+change without notice; it needs the flag; and the per-step usage a plugin receives has input,
+output and cache token counts but not thinking tokens or the cache-lifetime split, so the
+spend breakdown in `stats` would be less exact.
+
 ## Verifying a new Claude Code release
 
 1. `JEV_EFFORT_DUMP_DIR=/tmp/jev-dump jev-effort -p "Run ls" --allowedTools "Bash(ls)"` and

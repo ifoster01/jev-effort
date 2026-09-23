@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- README: Related work (similar tools, research, Claude Code's own options).
+- docs/how-it-works.md: tested Claude Code's early-access function hooks as a native
+  alternative to the proxy (effort honored, cache preserved).
+
 ## 0.1.1
 
 `jev-effort stats` now answers "would this save me money?" directly:

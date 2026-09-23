@@ -165,6 +165,41 @@ Environment: `JEV_API_KEY` (or `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `AI_GAT
   set `ANTHROPIC_BASE_URL` where they allow it.
 - Windows is untested.
 
+## Related work
+
+Checked 2026-09-23. Almost all of this appeared within days of Astra-Ares.
+
+**Tools**
+
+| Project | Approach | How often effort changes |
+| --- | --- | --- |
+| [Astra-Ares](https://github.com/miuuyy/Astra-Ares) | Patched Codex, GPT-6 Astra. The original idea; jev-effort adapts its Jev prompt wording | Every step, with leases |
+| [jev-opus](https://github.com/WXK-AI/jev-opus) | Proxy with per-message effort markers, like jev-effort; adds work-phase adjustments (lower while exploring, higher while diagnosing) and raises effort after tool failures | Every step |
+| [jev-model-router](https://github.com/moelahmady/jev-model-router) | Claude Code's early-access function hooks; optional model routing | Once per prompt |
+| [effort-router](https://github.com/handpickedlab/effort-router) | Claude Code plugin; raises effort in stuck sessions | Per task |
+| [jev-adaptive-effort](https://github.com/robertovoyk-ctrl/jev-adaptive-effort) | Custom Python agent on the Claude API, not Claude Code | Every step |
+| [jev-subagent-router](https://github.com/DefensiveSniper/jev-subagent-router) | Picks model and effort when a subagent is spawned | Per subagent |
+
+None of these, as of this writing, compares total cost against a fixed-effort baseline.
+
+**Research.** [ARES](https://arxiv.org/abs/2603.07915) (a trained per-step router) reports up to
+52.7% fewer reasoning tokens with minimal loss in task success;
+[TAB](https://arxiv.org/abs/2604.05164) (per-turn budgets learned with RL) reports up to 35%
+fewer tokens. Both measure reasoning tokens, not total spend. jev-effort's benchmark agrees on
+that number (46% less thinking) but finds total cost barely moves in cached Claude Code
+sessions, because re-reading context dominates the bill.
+
+**Claude Code itself** has no adaptive effort: `/effort auto` was
+[an alias for `max`](https://github.com/anthropics/claude-code/issues/50328). Its early-access
+**function hooks** (2.1.260+, behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`) let a plugin's
+`turn.step` hook rewrite effort for each model request. In a test on 2.1.280, Claude Code then
+inserted the same effort-only markers jev-effort uses and the cache held on every step. That is
+a likely future home for this approach once the API is stable; see
+[docs/how-it-works.md](docs/how-it-works.md#native-alternative-function-hooks-early-access).
+
+**Where jev-effort differs:** measurement. Shadow mode, stats that price your spend, and a
+benchmark with hidden checks answer whether per-step effort is worth it for you.
+
 ## Uninstall
 
 ```sh
