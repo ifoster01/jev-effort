@@ -1,35 +1,33 @@
 # jev-effort
 
-**Does letting Jev choose Claude Code's reasoning effort, step by step, save money? I measured
-it on a day of real sessions. It would have saved about 2%.**
+**Does letting Jev choose Claude Code's reasoning effort, step by step, save money? At `high`
+effort, barely: about 1%. At `max` effort, it cut the cost of a coding benchmark by 55% with every
+test still passing. In a long real session at `max`, the estimated saving was 4–9%, because
+re-reading the conversation's context is most of the bill.**
 
-> A research project. The code works and the results are reproducible, but it isn't
-> recommended as a cost-saving tool. Unofficial; not affiliated with Anthropic or TypeSafe.
-
-> **Correction in progress (0.1.2).** The real-session figures below were inflated by a bug:
-> behind the proxy, Claude Code turned off MCP tool search, so every MCP tool definition was
-> loaded into every request. That's fixed, and the sessions are being re-measured. A rough
-> correction puts Jev's saving at about 4–5% rather than 2%. The benchmark results are
-> unaffected.
+> A research project. The code works and the results are reproducible. Unofficial; not affiliated
+> with Anthropic or TypeSafe.
 
 ## Summary
 
 [Jev](https://openrouter.ai/typesafe/jev-1.13) is TypeSafe's small, cheap decision model. After
 [Astra-Ares](https://github.com/miuuyy/Astra-Ares) used it to choose GPT-6 Astra's reasoning
-effort per step in Codex, several tools appeared doing the same for Claude. The pitch: most
-agent steps are routine, so run them at low effort and keep deep reasoning for the hard ones.
+effort per step in Codex, several tools appeared doing the same for Claude. The pitch: most agent
+steps are routine, so run them at low effort and keep deep reasoning for the hard ones.
 
 I built a proxy that does this for Claude Code without breaking the prompt cache, confirmed it
 works, then measured what it saves.
 
 | Test | Result |
 | --- | --- |
-| Real sessions in shadow mode (310 steps, $86.79) | Jev would lower effort on 86% of steps. Estimated saving: **$1.62 (1.9%)** |
-| Where that money went | **91.5%** reading and writing cached context, **4.8%** hidden thinking |
-| Controlled benchmark (24 sessions, hidden tests) | Thinking **−46%**, total cost **−1.1%**, every test passed in both arms |
+| Benchmark at `high` (24 sessions, hidden tests) | Cost **−1.1%**, thinking −46%, every test passed in both arms |
+| Benchmark at `max` (24 sessions, hidden tests) | Cost **−55%**, thinking −98.5%, wall time −58%, every test passed in both arms |
+| Real session at `max`, shadow mode (470 steps, 92 min) | Estimated saving **4–9%**. Cached context was 82% of spend, thinking 9.5% |
 
-Effort changes how much the model thinks. In long Claude Code sessions the bill is dominated by
-the context re-read on every step, which effort doesn't touch.
+Effort changes how much the model thinks, and the saving follows thinking's share of the bill.
+At `high`, Claude Opus 5.5 thinks little on routine steps, so there's little to cut. At `max`, it
+thinks a lot even on routine steps, and Jev moves those down. But in a long session every step
+re-reads hundreds of thousands of tokens of context, which effort doesn't touch.
 
 ## Background
 
@@ -55,76 +53,38 @@ one. Jev may lower effort but never exceed the session's own setting.
 
 **2. Verification.** On a hard counting problem, a `low` marker produced 438–548 output tokens
 and `max` produced 1,528–1,809, in line with Claude Code's own `--effort` (438 and 1,733). With
-effort alternating on every step, each request read the full previous prefix from cache. Across
-the real sessions: 0 unexpected cache misses in 283 checked steps.
+effort alternating on every step, each request read the full previous prefix from cache. In the
+real session: 0 unexpected cache misses in 411 checked steps, 99.1% cache hit rate.
 
-**3. Shadow mode on real work.** My normal Claude Code use for one day (September 23, 2026): 6
-sessions, 310 model steps, Opus 5.5, Claude Code 2.1.280, sessions at `high` and `max`. For every
-step, Jev's choice was logged and nothing was changed. Each request was priced at Claude API list
-prices from the usage the API reported: cache reads, cache writes, output, and hidden thinking.
+**3. Controlled benchmark.** Six small coding tasks, each with a visible test and hidden checks.
+Each task ran from identical files twice: once at a fixed effort, once with Jev choosing under
+that same effort as its ceiling. Two rounds at `high` and two at `max`, 48 headless Claude Code
+sessions in all. A warm-up run came first so neither arm paid to cache the other's system prompt.
 
-**4. Controlled benchmark.** Six small coding tasks, each with a visible test and hidden checks.
-Each task ran from identical files twice, once at fixed `high` and once with Jev choosing (capped
-at `high`), for two rounds: 24 headless Claude Code sessions. A warm-up run came first so neither
-arm paid to cache the other's system prompt.
+**4. Shadow mode on real work.** One 92-minute session of my normal work at `max` effort (470
+model steps, Opus 5.5, Claude Code 2.1.280). For every step, Jev's choice was logged and nothing
+was changed. Each request was priced at Claude API list prices from the usage the API reported:
+cache reads, cache writes, output, and hidden thinking.
 
 ## Results
 
-### Where the money went
+### Benchmark at `max`
 
-Opus 5.5 list prices: $0.20 per million tokens read from cache, $8 per million written to the
-one-hour cache, $20 per million output tokens. I'm on a subscription, so these are
-API-equivalent figures, not a bill.
+| Task | Pass (fixed / Jev) | Cost (fixed / Jev) | Thinking tokens (fixed / Jev) | Jev's effort mix |
+| --- | --- | ---: | ---: | --- |
+| expr-eval | 2/2 / 2/2 | $2.00 / $0.32 | 54,397 / 551 | low 5, medium 4 |
+| interval-merge | 2/2 / 2/2 | $0.36 / $0.25 | 2,907 / 45 | low 5, medium 4 |
+| lru-cache | 2/2 / 2/2 | $0.39 / $0.23 | 2,963 / 0 | low 3, medium 4 |
+| paginate-bug | 2/2 / 2/2 | $0.35 / $0.28 | 2,788 / 45 | low 4, medium 5 |
+| rename-refactor | 2/2 / 2/2 | $0.38 / $0.36 | 1,335 / 313 | low 12, high 2 |
+| stats-bugs | 2/2 / 2/2 | $0.27 / $0.28 | 509 / 0 | low 6, medium 4 |
+| **Total** | 12/12 / 12/12 | **$3.76 / $1.70 (−55%)** | 64,899 / 954 (−98.5%) | |
 
-| Category | Spend | Share |
-| --- | ---: | ---: |
-| Cache writes | $41.32 | 47.6% |
-| Cache reads | $38.08 | 43.9% |
-| Hidden thinking | $4.19 | 4.8% |
-| Visible output | $3.17 | 3.7% |
-| Uncached input | $0.04 | 0.0% |
-| **Total** | **$86.79** | |
+Wall time fell from 913 s to 387 s. One task dominates: on expr-eval, `max` thought for about
+27,000 tokens per run and Jev's low and medium settings passed the same hidden tests with about
+280. Without expr-eval, cost still fell 21%.
 
-Sessions averaged 633K tokens of context per step, re-read every time. Thinking was 57% of output
-*tokens* but 4.8% of *dollars*.
-
-### What Jev chose
-
-| Effort | Claude Code's setting | Jev's pick |
-| --- | ---: | ---: |
-| low | 0 | 78 |
-| medium | 6 | 99 |
-| high | 140 | 115 |
-| xhigh | 0 | 0 |
-| max | 164 | 18 |
-
-Jev lowered effort on 268 of 310 steps. In `high` sessions it couldn't go higher. In `max`
-sessions it could, and mostly didn't: of 164 steps it kept 18 at max, moved 96 to high, and 50 to
-medium or low. It never chose xhigh.
-
-### What it would save
-
-| | Amount | Share of spend |
-| --- | ---: | ---: |
-| Ceiling: all thinking removed on the 267 steps Jev would lower | $3.65 | 4.2% |
-| Estimate: at the 46% thinking reduction measured in the benchmark | $1.68 | 1.9% |
-| Jev's own cost (1.4M input tokens) | −$0.06 | |
-| **Net** | **$1.62** | **1.9%** |
-
-**The break-even is thin.** At 633K tokens of context, one extra step costs about $0.13 to
-re-read. The whole net saving equals about 13 extra steps across 267 lowered ones: if lower effort
-makes Claude take roughly 5% more steps, it loses money. Shadow mode can't observe that.
-
-**Effort level matters more than Jev.** Thinking's share of each session's spend:
-
-| Session effort | Sessions | Thinking share of spend |
-| --- | ---: | ---: |
-| high | 4 | 0.9–2.3% |
-| max | 2 | 7.3–9.0% |
-
-At `high` there is almost nothing to save. At `max` there is a few percent.
-
-### Controlled benchmark
+### Benchmark at `high`
 
 | | Fixed high | Jev | Change |
 | --- | ---: | ---: | ---: |
@@ -134,39 +94,78 @@ At `high` there is almost nothing to save. At `max` there is a few percent.
 | Cost | $1.94 | $1.92 | −1.1% |
 | Wall time | 393 s | 417 s | +6% |
 
-Per-task results: [docs/results/](docs/results/2026-09-23-opus-5-5-high.json).
+### Real session at `max`
+
+Opus 5.5 list prices: $0.20 per million tokens read from cache, $8 per million written to the
+one-hour cache, $20 per million output tokens. I'm on a subscription, so these are
+API-equivalent figures, not a bill.
+
+| Category | Spend | Share |
+| --- | ---: | ---: |
+| Cache reads | $41.05 | 63.9% |
+| Cache writes | $11.51 | 17.9% |
+| Hidden thinking | $6.10 | 9.5% |
+| Visible output | $5.13 | 8.0% |
+| Uncached input | $0.45 | 0.7% |
+| **Total** | **$64.23** | |
+
+The session averaged 441K tokens of context per step, re-read every time.
+
+Jev would have lowered effort on all 470 steps: to high on 261, xhigh on 149, low on 51, and
+medium on 9. It never kept `max`.
+
+| | Amount | Share of spend |
+| --- | ---: | ---: |
+| Ceiling: all thinking removed on those steps | $6.10 | 9.5% |
+| Estimate at the `high` benchmark's thinking cut (46%) | $2.80 | 4.4% |
+| Estimate at the `max` benchmark's thinking cut (98.5%) | $6.01 | 9.4% |
+| Jev's own cost (2.9M input tokens) | −$0.12 | |
+| **Net** | **$2.68–$5.89** | **4.2–9.2%** |
+
+The `max` benchmark's cut is likely too high for this session: there Jev mostly chose low and
+medium, while here it mostly chose high and xhigh. **The break-even is thin.** One extra step
+costs about $0.09 to re-read the context, so the net saving equals 30–67 extra steps across 470.
+If lower effort makes Claude take more steps than that, it loses money. Shadow mode can't observe
+that; the benchmarks found step counts roughly unchanged (92 vs 87 turns at `max`).
 
 ## Interpretation
 
-- **The mechanism works.** Jev roughly halves thinking, the cache survives, and quality held on
-  the benchmark.
-- **It barely moves cost.** In long, cached sessions, context dominates the bill. The best case is
-  `max` sessions, at a few percent.
-- **It adds latency.** Jev took 747 ms median and 3.8 s at p95 per decision, with 18 timeouts.
-  Applied live, that would have added about 5.5 minutes of waiting to the day.
-- **A per-user savings tracker wouldn't be meaningful.** Per-prompt cost had a standard
-  deviation of 1.8× its average, so confirming a 2% difference directly would take tens of
-  thousands of randomized prompts.
-- **The real cost drivers are elsewhere.** Returning to a conversation after the one-hour cache
-  expired cost $18.17 (4 times, each re-writing the whole context). Five conversations began with
-  281K–500K tokens already in context, costing $16.25. Each is about ten times Jev's total saving.
-  Context size is the lever: Opus 5.5 with the 1M window doesn't auto-compact until about 967K
-  tokens.
+- **The mechanism works.** Effort changes take hold, the cache survives, and every hidden test
+  passed in both arms at both effort levels.
+- **At `high`, it doesn't pay.** Opus 5.5 at `high` spends little on thinking during routine
+  steps, so a 46% thinking cut moved total cost by about 1%.
+- **At `max`, it can pay.** `max` spends heavily on thinking even when the step doesn't need it.
+  With short contexts the saving is large (55% on the benchmark, and faster). In a long session
+  the same kind of cut is a few percent of the bill, because context dominates.
+- **It adds latency, but may not cost time.** Jev took 601 ms median and 793 ms at p95 per
+  decision, with no errors. At `max`, less thinking more than made up for it: the Jev arm finished
+  the benchmark in 42% of the time.
+- **Quality at `max` on real work is untested.** The benchmark tasks are small and well specified.
+  If you run `max` because your work needs it, lowering effort may cost more than it saves.
+
+## Correction
+
+The first real-session measurement, published briefly, was invalid. Behind any custom
+`ANTHROPIC_BASE_URL`, Claude Code turns off MCP tool search, so jev-effort 0.1.1 sent every MCP
+tool definition (254K–473K tokens) on every request. That more than doubled the measured spend and
+diluted thinking's share, which made Jev look worse than it is (a 1.9% saving). 0.1.2 fixed it,
+and the numbers above come only from sessions after the fix. The data is kept as evidence of the
+effect: [docs/results/2026-09-23-tool-search-bug-sessions.json](docs/results/2026-09-23-tool-search-bug-sessions.json).
+The benchmarks weren't affected; they ran without MCP servers.
 
 ## Limitations
 
-- One developer, one day, six sessions, one model. Short sessions or small repositories could
-  show a larger thinking share.
-- Dollar figures apply API list prices to subscription usage. How plan limits weigh each token
-  type isn't published.
-- The shadow-mode estimate borrows the benchmark's 46% thinking reduction. Shadow mode can't
-  measure quality or extra steps on real work.
+- One real session, at `max`, 92 minutes. There's no clean real-session measurement at `high`
+  yet; the earlier one was invalid (see Correction).
+- The benchmark tasks are small, and two runs per task shows direction, not a precise effect
+  size. One task accounts for most of the `max` result.
+- Shadow mode can't measure quality or extra steps on real work, so the real-session saving is a
+  range, not a measurement.
 - Behind any proxy, Claude Code drops a few direct-connection features, including claude.ai-backed
   tools such as Artifacts, so each request carried about 4K fewer tokens than a direct session
-  would. jev-effort restores tool search, tool streaming, and hint headers
-  ([details](docs/usage.md#limitations)).
-- The benchmark tasks are small. Two runs per task is enough to see the direction, not a precise
-  effect size.
+  would ([details](docs/usage.md#limitations)).
+- Dollar figures apply API list prices to subscription usage. How plan limits weigh each token
+  type isn't published.
 
 ## Notes on Claude Code internals
 
@@ -189,16 +188,17 @@ Found while building this; details and evidence in [docs/how-it-works.md](docs/h
 ## Reproduce
 
 ```sh
-npx jev-effort --jev-shadow          # use like `claude`; logs Jev's choices, changes nothing
-npx jev-effort stats                 # where your spend goes and what Jev would save
-npx jev-effort stats --share         # the same, safe to paste (no prompts or ids)
-npx jev-effort bench --runs 2        # the controlled comparison (uses your Claude usage)
+npx jev-effort --jev-shadow              # use like `claude`; logs Jev's choices, changes nothing
+npx jev-effort stats                     # where your spend goes and what Jev would save
+npx jev-effort stats --share             # the same, safe to paste (no prompts or ids)
+npx jev-effort bench --effort max --runs 2   # the controlled comparison (uses your Claude usage)
 ```
 
 Setup, configuration, and privacy details: [docs/usage.md](docs/usage.md). The data behind this
-page: [shadow sessions](docs/results/2026-09-23-shadow-sessions.json) and
-[benchmark](docs/results/2026-09-23-opus-5-5-high.json). If your numbers look different,
-especially with heavy `max` use, please open an issue with `jev-effort stats --share`.
+page: [real session at max](docs/results/2026-09-23-max-session.json),
+[benchmark at max](docs/results/2026-09-23-opus-5-5-max.json), and
+[benchmark at high](docs/results/2026-09-23-opus-5-5-high.json). If your numbers look different,
+please open an issue with `jev-effort stats --share`.
 
 ## Related work
 

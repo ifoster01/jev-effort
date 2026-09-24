@@ -9,6 +9,9 @@
 - Documents the direct-connection features Claude Code turns off behind any proxy that can't be
   restored: Remote Control, server-managed settings, claude.ai-backed tools such as Artifacts.
   `doctor` warns.
+- README results rebuilt from clean data: a benchmark at `max` (cost −55%, every test passing), a
+  92-minute real session at `max` (estimated saving 4–9%), and a correction explaining why the
+  first real-session measurement was invalid.
 
 ## 0.1.2
 

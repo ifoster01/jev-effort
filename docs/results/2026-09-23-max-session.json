@@ -1,0 +1,110 @@
+{
+  "description": "jev-effort 0.1.2 shadow-mode aggregate: one Claude Code session at max effort on 2026-09-23 (22:05-23:36 UTC), Opus 5.5, Claude Code 2.1.280, MCP tool search working. Two side requests under 5K tokens (titles; 0.1.2 had no request-class header) excluded. Dollar figures are Claude API list prices applied to subscription usage. No prompts, code, or session ids.",
+  "period": {
+    "from": "2026-09-23T22:05:23.915Z",
+    "to": "2026-09-23T23:37:18.678Z",
+    "days": 1
+  },
+  "sessions": 1,
+  "requests": 471,
+  "managedSteps": 470,
+  "applySteps": 0,
+  "shadowSteps": 470,
+  "sessionMix": {
+    "low": 0,
+    "medium": 0,
+    "high": 0,
+    "xhigh": 0,
+    "max": 470
+  },
+  "jevMix": {
+    "low": 51,
+    "medium": 9,
+    "high": 261,
+    "xhigh": 149,
+    "max": 0
+  },
+  "lowered": 470,
+  "raised": 0,
+  "sources": {
+    "jev": 418,
+    "lease": 52,
+    "range": 0,
+    "fallback": 0,
+    "retry": 1
+  },
+  "jev": {
+    "calls": 418,
+    "p50Ms": 601,
+    "p95Ms": 793,
+    "inputTokens": 2886990,
+    "costUsd": null,
+    "addedMs": 0,
+    "wouldAddMs": 242028,
+    "errors": []
+  },
+  "spend": {
+    "read": 41.04763459999999,
+    "write": 11.506622000000004,
+    "input": 0.44932800000000217,
+    "visibleOutput": 5.1335,
+    "thinking": 6.096840000000001,
+    "total": 64.2339246,
+    "ttlAssumed": 0,
+    "unpriced": 0
+  },
+  "savings": {
+    "steps": 470,
+    "lowered": 470,
+    "ceiling": 6.096840000000001,
+    "estimate": 2.8045464000000004,
+    "jevCost": 0.12125357999999993,
+    "net": 2.6832928200000006,
+    "ceilingShare": 0.09491619946883958,
+    "estimateShare": 0.04366145175566621,
+    "netShare": 0.041773764201852935,
+    "avgContext": 440630,
+    "extraStep": 0.08812607574468088,
+    "stepsEquivalent": 30.44834116719374
+  },
+  "perSession": [
+    {
+      "session": 1,
+      "start": "2026-09-23T22:05:29.274Z",
+      "model": "claude-opus-5-5",
+      "effort": "max",
+      "modes": "shadow",
+      "steps": 470,
+      "avgContext": 440630,
+      "spend": 64.2339246,
+      "thinkingShare": 0.09491619946883958,
+      "lowered": 1
+    }
+  ],
+  "cache": {
+    "read": 205238173,
+    "write": 1745773,
+    "uncached": 112332,
+    "hitRate": 0.9910278204034164,
+    "breaks": 0,
+    "checked": 411
+  },
+  "outputPerStep": {
+    "apply": null,
+    "shadow": 1195
+  },
+  "output": {
+    "tokens": 561517,
+    "thinking": {
+      "tokens": 304842,
+      "share": 0.5428900638805236
+    }
+  },
+  "rateLimits": 1,
+  "problems": {
+    "injectionRejected": 0,
+    "policyErrors": 0,
+    "proxyErrors": 0,
+    "apiErrors": 0
+  }
+}
