@@ -55,7 +55,7 @@ test("summary covers effort mix, Jev, cache and problems", () => {
   assert.equal(s.output.thinking, null, "no thinking counts in these records");
   const withThinking = summarize([rec(0, { usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 200, thinking: 50 } })]);
   assert.equal(withThinking.output.thinking.share, 0.25);
-  assert.match(formatSummary(withThinking), /Hidden thinking\s+\$0\.001\s+25%.*what effort changes/);
+  assert.match(formatSummary(withThinking), /Hidden thinking\s+\$0\.001\s+25\.0%.*what effort changes/);
   const text = formatSummary(s);
   assert.match(text, /Jev would lower effort on 3 of 5 steps \(60%\)/);
   assert.match(text, /^WOULD JEV SAVE YOU MONEY\?$/m);

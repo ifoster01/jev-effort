@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- `stats` shows spend shares to one decimal, so small categories such as thinking read exactly
+  (9.5%, not 9% or 10%).
+
 ## 0.1.6
 
 - `jev-effort stats` redesigned to read top-down: first whether Jev would save you money (an

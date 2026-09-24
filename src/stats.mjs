@@ -219,6 +219,8 @@ export function summarize(records) {
 const k = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(Math.round(n)));
 const usd = (n) => (Math.abs(n) >= 0.1 ? `$${n.toFixed(2)}` : `$${n.toFixed(3)}`);
 const share = (x, total) => (total ? `${Math.round((100 * x) / total)}%` : "–");
+// Spend shares keep a decimal: small categories like thinking are the point of the table.
+const share1 = (x, total) => (total ? `${((100 * x) / total).toFixed(1)}%` : "–");
 const pct1 = (x) => `${(100 * x).toFixed(1)}%`;
 const mins = (ms) => (ms >= 60e3 ? `${(ms / 60e3).toFixed(1)} min` : ms >= 1000 ? `${Math.round(ms / 1000)} s` : `${Math.round(ms)} ms`);
 const when = (iso) => {
@@ -308,7 +310,7 @@ function formatTerminal(s) {
     L.push("", `WHERE YOUR SPEND WENT${usd(m.total).padStart(55)}`);
     L.push(
       ...table(
-        spendRows(m).map(([name, x]) => [name, usd(x), share(x, m.total), bar(x, m.total) + (name === "Hidden thinking" ? "  ← what effort changes" : "")]),
+        spendRows(m).map(([name, x]) => [name, usd(x), share1(x, m.total), bar(x, m.total) + (name === "Hidden thinking" ? "  ← what effort changes" : "")]),
         "lrrl",
       ),
     );
@@ -328,7 +330,7 @@ function formatTerminal(s) {
       ...table(
         [
           ["Started (UTC)", "Effort", "Steps", "Avg context", "Spend", "Thinking", "Jev lowers"],
-          ...shown.map((x) => [when(x.start), x.effort, x.steps, k(x.avgContext), usd(x.spend), share(x.thinkingShare, 1), share(x.lowered, 1)]),
+          ...shown.map((x) => [when(x.start), x.effort, x.steps, k(x.avgContext), usd(x.spend), share1(x.thinkingShare, 1), share(x.lowered, 1)]),
         ],
         "llrrrrr",
       ),
@@ -379,14 +381,14 @@ function formatMarkdown(s) {
   ];
   if (m.total > 0) {
     L.push("", "| Where the spend went | Amount | Share |", "| --- | ---: | ---: |");
-    for (const [name, x] of spendRows(m)) L.push(`| ${name} | ${usd(x)} | ${share(x, m.total)} |`);
+    for (const [name, x] of spendRows(m)) L.push(`| ${name} | ${usd(x)} | ${share1(x, m.total)} |`);
     L.push(`| **Total** | **${usd(m.total)}** | |`);
   }
   L.push("", "| Effort | Claude Code's setting | Jev's pick |", "| --- | ---: | ---: |");
   for (const e of EFFORTS) L.push(`| ${e} | ${s.sessionMix[e]} | ${s.jevMix[e]} |`);
   if (s.perSession.length) {
     L.push("", "| Session | Effort | Steps | Avg context | Spend | Thinking share | Jev lowers |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |");
-    s.perSession.forEach((x, i) => L.push(`| ${i + 1} | ${x.effort} | ${x.steps} | ${k(x.avgContext)} | ${usd(x.spend)} | ${share(x.thinkingShare, 1)} | ${share(x.lowered, 1)} |`));
+    s.perSession.forEach((x, i) => L.push(`| ${i + 1} | ${x.effort} | ${x.steps} | ${k(x.avgContext)} | ${usd(x.spend)} | ${share1(x.thinkingShare, 1)} | ${share(x.lowered, 1)} |`));
   }
   L.push(
     "",
