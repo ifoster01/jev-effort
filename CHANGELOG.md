@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- README results rebuilt from clean data: a benchmark at `max` (cost −55%, every test passing), a
+  92-minute real session at `max` (estimated saving 4–9%), and a correction explaining why the
+  first real-session measurement was invalid.
+- New result files: `docs/results/2026-09-23-opus-5-5-max.json` and
+  `docs/results/2026-09-23-max-session.json`. The invalid first-day aggregate is renamed
+  `2026-09-23-tool-search-bug-sessions.json`.
+
 ## 0.1.3
 
 - Restores Claude Code's request-class hint headers behind the proxy
@@ -9,9 +18,6 @@
 - Documents the direct-connection features Claude Code turns off behind any proxy that can't be
   restored: Remote Control, server-managed settings, claude.ai-backed tools such as Artifacts.
   `doctor` warns.
-- README results rebuilt from clean data: a benchmark at `max` (cost −55%, every test passing), a
-  92-minute real session at `max` (estimated saving 4–9%), and a correction explaining why the
-  first real-session measurement was invalid.
 
 ## 0.1.2
 

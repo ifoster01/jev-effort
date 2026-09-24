@@ -1,6 +1,6 @@
 {
   "name": "jev-effort",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Research: does letting Jev choose Claude Code's reasoning effort per step save money? A cache-safe proxy, shadow mode, and a benchmark to measure it. Unofficial.",
   "repository": {
     "type": "git",
