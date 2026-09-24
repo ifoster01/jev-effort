@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.6
+
+- `jev-effort stats` redesigned to read top-down: first whether Jev would save you money (an
+  estimated range, the break-even in extra steps, and Jev's own cost), then where your spend
+  went (aligned, with bars), your effort setting next to Jev's picks, sessions by start time,
+  and a short health summary. `--share` follows the same structure as Markdown tables.
+- The savings estimate is now a range, using the thinking cuts `bench` measured at `high` (46%)
+  and `max` (98.5%).
+- README: the prompt-cache result up front, and a comparison with simply using `high`.
+
 ## 0.1.5
 
 - README cleanup.

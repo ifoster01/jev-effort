@@ -3,7 +3,8 @@
 **Does letting Jev choose Claude Code's reasoning effort, step by step, save money? At `high`
 effort, barely: about 1%. At `max` effort, it cut the cost of a coding benchmark by 55% with every
 test still passing. In a long real session at `max`, the estimated saving was 4–9%, because
-re-reading the conversation's context is most of the bill.**
+re-reading the conversation's context is most of the bill. Changing effort on every step never
+reset the prompt cache.**
 
 > A research project. The code works and the results are reproducible. Unofficial; not affiliated
 > with Anthropic or TypeSafe.
@@ -21,13 +22,31 @@ works, then measured what it saves.
 | Test | Result |
 | --- | --- |
 | Benchmark at `high` (24 sessions, hidden tests) | Cost **−1.1%**, thinking −46%, every test passed in both arms |
-| Benchmark at `max` (24 sessions, hidden tests) | Cost **−55%**, thinking −98.5%, wall time −58%, every test passed in both arms |
+| Benchmark at `max` (24 sessions, hidden tests) | Cost **−55%** (−21% without its one outlier task), thinking −98.5%, wall time −58%, every test passed in both arms |
 | Real session at `max`, shadow mode (470 steps, 92 min) | Estimated saving **4–9%**. Cached context was 82% of spend, thinking 9.5% |
 
 Effort changes how much the model thinks, and the saving follows thinking's share of the bill.
 At `high`, Claude Opus 5.5 thinks little on routine steps, so there's little to cut. At `max`, it
 thinks a lot even on routine steps, and Jev moves those down. But in a long session every step
 re-reads hundreds of thousands of tokens of context, which effort doesn't touch.
+
+## Changing effort doesn't reset the cache
+
+Claude Code caches the conversation so each step only pays full price for what's new. Changing
+effort mid-session used to throw that cache away. It no longer has to: Anthropic's
+[per-message effort](https://platform.claude.com/docs/en/build-with-claude/effort#change-effort-mid-conversation-beta)
+beta lets an effort-only system message change the level while leaving the cached prefix intact.
+
+It held inside Claude Code. In the 470-step session with effort chosen on every step: **0
+unexpected cache misses in 411 checked steps, and a 99.1% cache hit rate.** With effort
+alternating low/high on every step of a test task, each request read the whole previous prefix
+from cache (26,992 → 34,285 → 35,017 → 35,270 → 35,617 tokens).
+
+The catch: Claude Code already carries its own effort setting on a system message near the
+start of the conversation (beta `per-turn-control-2026-07-01`), and the latest setting in a
+request wins. An injected effort change has
+to be the last message, or it's silently ignored. Changing the request's top-level effort field is
+ignored the same way.
 
 ## Background
 
@@ -84,6 +103,17 @@ Wall time fell from 913 s to 387 s. One task dominates: on expr-eval, `max` thou
 27,000 tokens per run and Jev's low and medium settings passed the same hidden tests with about
 280. Without expr-eval, cost still fell 21%.
 
+**Compared with just using `high`.** The same six tasks at a fixed `high` cost less than fixed
+`max`, so the fair question is whether Jev beats simply turning effort down. On these tasks it
+matched or beat it. The runs were separate, so treat this as a rough comparison:
+
+| Same six tasks, two runs each | Cost | Thinking tokens | Wall time | Passed |
+| --- | ---: | ---: | ---: | ---: |
+| Fixed `max` | $3.76 | 64,899 | 913 s | 12/12 |
+| Fixed `high` | $1.94 | 1,450 | 393 s | 12/12 |
+| Jev, capped at `high` | $1.92 | 787 | 417 s | 12/12 |
+| Jev, capped at `max` | $1.70 | 954 | 387 s | 12/12 |
+
 ### Benchmark at `high`
 
 | | Fixed high | Jev | Change |
@@ -137,6 +167,9 @@ that; the benchmarks found step counts roughly unchanged (92 vs 87 turns at `max
 - **At `max`, it can pay.** `max` spends heavily on thinking even when the step doesn't need it.
   With short contexts the saving is large (55% on the benchmark, and faster). In a long session
   the same kind of cut is a few percent of the bill, because context dominates.
+- **It isn't much better than turning effort down yourself.** On the benchmark, Jev under a `max`
+  ceiling cost about the same as fixed `high`. What it adds is keeping `max` available for the
+  steps that need it, which small tasks can't show.
 - **It adds latency, but may not cost time.** Jev took 601 ms median and 793 ms at p95 per
   decision, with no errors. At `max`, less thinking more than made up for it: the Jev arm finished
   the benchmark in 42% of the time.
@@ -160,10 +193,6 @@ that; the benchmarks found step counts roughly unchanged (92 vs 87 turns at `max
 
 Found while building this; details and evidence in [docs/how-it-works.md](docs/how-it-works.md).
 
-- Claude Code already sends per-turn effort on a system message right after the prompt (beta
-  `per-turn-control-2026-07-01`). The latest effort setting in a request wins, so an injected
-  marker must be the last message. Rewriting the top-level `output_config.effort` is silently
-  overridden.
 - Claude Code re-sends some messages as a plain string after first sending them as text blocks.
   The API caches both the same way, but anything that hashes the history must normalize them.
 - Any custom `ANTHROPIC_BASE_URL` makes Claude Code turn off MCP tool search, loading every MCP

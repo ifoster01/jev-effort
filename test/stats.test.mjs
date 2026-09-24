@@ -55,9 +55,11 @@ test("summary covers effort mix, Jev, cache and problems", () => {
   assert.equal(s.output.thinking, null, "no thinking counts in these records");
   const withThinking = summarize([rec(0, { usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 200, thinking: 50 } })]);
   assert.equal(withThinking.output.thinking.share, 0.25);
-  assert.match(formatSummary(withThinking), /25\.0% of them hidden thinking/);
+  assert.match(formatSummary(withThinking), /Hidden thinking\s+\$0\.001\s+25%.*what effort changes/);
   const text = formatSummary(s);
-  assert.match(text, /Jev lowered effort on 60\.0% of steps/);
+  assert.match(text, /Jev would lower effort on 3 of 5 steps \(60%\)/);
+  assert.match(text, /^WOULD JEV SAVE YOU MONEY\?$/m);
+  assert.match(text, /Estimated saving/);
   assert.match(formatSummary(s, { share: true }), /^### jev-effort/);
   assert.ok(!formatSummary(s, { share: true }).includes("s1"), "share output has no session ids");
 });
@@ -115,9 +117,10 @@ test("savings: ceiling, bench-calibrated estimate, Jev cost, and the cost of one
   assert.equal(Number(v.jevCost.toFixed(4)), 0.042, "estimated from Jev input tokens when no cost is reported");
   assert.equal(Number(v.extraStep.toFixed(4)), 0.2, "re-reading 1M cached tokens at $0.20/M");
   assert.ok(v.net < 0 && v.stepsEquivalent < 0);
-  assert.match(formatSummary(summarize(records)), /one extra step costs about \$0\.20/);
+  assert.equal(Number(v.estimateHigh.toFixed(4)), Number((0.02 * 0.985).toFixed(4)));
+  assert.match(formatSummary(summarize(records)), /Jev's own cost is more than the thinking it would remove/);
   assert.equal(savings([rec(0)], 1), null, "apply-mode steps can't show savings");
-  assert.match(formatSummary(summarize([rec(0)])), /Needs shadow-mode data/);
+  assert.match(formatSummary(summarize([rec(0)])), /Not from these logs/);
 });
 
 test("sessions are broken out, and rate limits aren't counted as problems", () => {
