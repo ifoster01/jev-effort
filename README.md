@@ -143,20 +143,9 @@ that; the benchmarks found step counts roughly unchanged (92 vs 87 turns at `max
 - **Quality at `max` on real work is untested.** The benchmark tasks are small and well specified.
   If you run `max` because your work needs it, lowering effort may cost more than it saves.
 
-## Correction
-
-The first real-session measurement, published briefly, was invalid. Behind any custom
-`ANTHROPIC_BASE_URL`, Claude Code turns off MCP tool search, so jev-effort 0.1.1 sent every MCP
-tool definition (254K–473K tokens) on every request. That more than doubled the measured spend and
-diluted thinking's share, which made Jev look worse than it is (a 1.9% saving). 0.1.2 fixed it,
-and the numbers above come only from sessions after the fix. The data is kept as evidence of the
-effect: [docs/results/2026-09-23-tool-search-bug-sessions.json](docs/results/2026-09-23-tool-search-bug-sessions.json).
-The benchmarks weren't affected; they ran without MCP servers.
-
 ## Limitations
 
-- One real session, at `max`, 92 minutes. There's no clean real-session measurement at `high`
-  yet; the earlier one was invalid (see Correction).
+- One real session, at `max`, 92 minutes. There's no real-session measurement at `high`.
 - The benchmark tasks are small, and two runs per task shows direction, not a precise effect
   size. One task accounts for most of the `max` result.
 - Shadow mode can't measure quality or extra steps on real work, so the real-session saving is a

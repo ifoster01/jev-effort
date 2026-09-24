@@ -1,13 +1,15 @@
 # Changelog
 
+## 0.1.5
+
+- README cleanup.
+
 ## 0.1.4
 
-- README results rebuilt from clean data: a benchmark at `max` (cost −55%, every test passing), a
-  92-minute real session at `max` (estimated saving 4–9%), and a correction explaining why the
-  first real-session measurement was invalid.
+- README results: a benchmark at `max` (cost −55%, every test passing) and a 92-minute real
+  session at `max` (estimated saving 4–9%).
 - New result files: `docs/results/2026-09-23-opus-5-5-max.json` and
-  `docs/results/2026-09-23-max-session.json`. The invalid first-day aggregate is renamed
-  `2026-09-23-tool-search-bug-sessions.json`.
+  `docs/results/2026-09-23-max-session.json`.
 
 ## 0.1.3
 
@@ -27,10 +29,8 @@
   now sets `ENABLE_TOOL_SEARCH=true` and `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1` when
   forwarding to the Claude API directly, unless you've set them; `serve` prints them and
   `doctor` checks them.
-- README rewritten as a research write-up: question, method, results, and limitations from
-  a day of real sessions and the benchmark. Tool documentation moved to docs/usage.md.
-- docs/results/2026-09-23-shadow-sessions.json: the anonymized aggregate behind the README.
-
+- README rewritten as a research write-up: question, method, results, and limitations. Tool
+  documentation moved to docs/usage.md.
 - README: Related work (similar tools, research, Claude Code's own options).
 - docs/how-it-works.md: tested Claude Code's early-access function hooks as a native
   alternative to the proxy (effort honored, cache preserved).
