@@ -150,7 +150,7 @@ medium on 9. It never kept `max`.
 | Estimate at the `high` benchmark's thinking cut (46%) | $2.80 | 4.4% |
 | Estimate at the `max` benchmark's thinking cut (98.5%) | $6.01 | 9.4% |
 | Jev's own cost (2.9M input tokens) | −$0.12 | |
-| **Net** | **$2.68–$5.89** | **4.2–9.2%** |
+| **Net** | **$2.68–$5.88** | **4.2–9.2%** |
 
 The `max` benchmark's cut is likely too high for this session: there Jev mostly chose low and
 medium, while here it mostly chose high and xhigh. **The break-even is thin.** One extra step
